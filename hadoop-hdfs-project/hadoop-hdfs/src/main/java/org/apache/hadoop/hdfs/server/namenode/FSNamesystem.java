@@ -2273,6 +2273,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
     assert hasWriteLock();
+    LOG.info("Starting file write for client: " + clientMachine);
     // Verify that the destination does not exist as a directory already.
     final INodesInPath iip = dir.getINodesInPath4Write(src);
     final INode inode = iip.getLastINode();
@@ -2672,7 +2673,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
           + src + " inodeId " +  fileId  + " for " + clientName);
     }
-
+    LOG.info("BLOCK* NameSystem.getAdditionalBlock: "
+            + src + " inodeId " +  fileId  + " for " + clientName +" favoredNode: "+ favoredNodes);
     // Part I. Analyze the state of the file with respect to the input data.
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);

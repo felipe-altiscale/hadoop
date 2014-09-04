@@ -70,10 +70,11 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
       StorageType storageType) throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
-    if (localMachine == null)
-      return chooseRandom(NodeBase.ROOT, excludedNodes, 
+    if (localMachine == null) {
+      LOG.info("Going random as localMachine is null");
+      return chooseRandom(NodeBase.ROOT, excludedNodes,
           blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
-
+    }
     // otherwise try local machine first
     if (localMachine instanceof DatanodeDescriptor) {
       DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;

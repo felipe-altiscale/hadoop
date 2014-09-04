@@ -20,6 +20,8 @@ package org.apache.hadoop.net;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import java.util.Arrays;
+
 /**
  * The class extends NetworkTopology to represents a cluster of computer with
  *  a 4-layers hierarchical network topology.
@@ -263,11 +265,12 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
    */
   @Override
   public void pseudoSortByDistance( Node reader, Node[] nodes ) {
-
+    LOG.info("Reading with reader: " + reader + " nodes: " + Arrays.toString(nodes));
     if (reader != null && !this.contains(reader)) {
       // if reader is not a datanode (not in NetworkTopology tree), we will 
       // replace this reader with a sibling leaf node in tree.
       Node nodeGroup = getNode(reader.getNetworkLocation());
+      LOG.info("Got nodegroup: " + nodeGroup + " for " + reader);
       if (nodeGroup != null && nodeGroup instanceof InnerNode) {
         InnerNode parentNode = (InnerNode) nodeGroup;
         // replace reader with the first children of its parent in tree
@@ -275,6 +278,8 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
       } else {
         return;
       }
+      LOG.info("Replaced reader with: " + reader);
+
     }
     int tempIndex = 0;
     int localRackNode = -1;
@@ -300,12 +305,14 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
           }
         } else if (localNodeGroupNode == -1 && isOnSameNodeGroup(reader, 
             nodes[i])) {
+          LOG.info("On the same nodegroup reader: " + reader + " node: " + nodes[i]);
           //local node group
           localNodeGroupNode = i;
           // node local and rack local are already found
           if(tempIndex != 0 && localRackNode != -1) break;
         } else if (localRackNode == -1 && isOnSameRack(reader, nodes[i])) {
           localRackNode = i;
+          LOG.info("On the same rack reader: " + reader + " node: " + nodes[i]);
           if (tempIndex != 0 && localNodeGroupNode != -1) break;
         }
       }
@@ -330,6 +337,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
     // local-rack node
     if (tempIndex == 0 && localNodeGroupNode == -1 && localRackNode == -1
         && nodes.length != 0) {
+      LOG.info("Nothing found, going random: " + reader);
       swap(nodes, 0, r.nextInt(nodes.length));
     }
   }

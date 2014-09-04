@@ -128,6 +128,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       StorageType storageType) {
     try {
       if (favoredNodes == null || favoredNodes.size() == 0) {
+        LOG.info("choosing target for " + src);
         // Favored nodes not specified, fall back to regular block placement.
         return chooseTarget(src, numOfReplicas, writer,
             new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
@@ -204,6 +205,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     if (!clusterMap.contains(writer)) {
+      LOG.info("Nulling writer: " + writer);
       writer = null;
     }
       
