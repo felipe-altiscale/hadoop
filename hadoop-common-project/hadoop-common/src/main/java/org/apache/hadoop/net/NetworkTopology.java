@@ -410,7 +410,7 @@ public class NetworkTopology {
                                            + " at an illegal network location");
       }
       if (clusterMap.add(node)) {
-        LOG.info("Adding a new node: "+NodeBase.getPath(node));
+        LOG.debug("Adding a new node: "+NodeBase.getPath(node));
         if (rack == null) {
           numOfRacks++;
         }
@@ -479,7 +479,7 @@ public class NetworkTopology {
       throw new IllegalArgumentException(
         "Not allow to remove an inner node: "+NodeBase.getPath(node));
     }
-    LOG.info("Removing a node: "+NodeBase.getPath(node));
+    LOG.debug("Removing a node: "+NodeBase.getPath(node));
     netlock.writeLock().lock();
     try {
       if (clusterMap.remove(node)) {
@@ -515,6 +515,7 @@ public class NetworkTopology {
     } finally {
       netlock.readLock().unlock();
     }
+    LOG.debug("Cannot find node: " + node);
     return false; 
   }
     
@@ -665,6 +666,18 @@ public class NetworkTopology {
    * @see #isOnSameRack(Node, Node)
    */
   protected boolean isSameParents(Node node1, Node node2) {
+    LOG.debug("Checking equality for: " + node1 + ", " + node2
+            + " node1.parent " + node1.getParent() + " node2 parent: " + node2.getParent()
+            + " equal? " + (node1.getParent()==node2.getParent())
+    );
+    if (node1.getParent() == null
+            && node1.getNetworkLocation() != null
+            && node2.getParent() != null){
+      LOG.debug("Checking equality for: "
+              + " node1.location " + node1.getNetworkLocation() + " node2 parent: " + node2.getParent().getName()
+              + " equal? " + node1.getNetworkLocation().equals(node2.getParent().getName()));
+      return node1.getNetworkLocation().equals(node2.getParent().getName());
+    }
     return node1.getParent()==node2.getParent();
   }
 
@@ -850,6 +863,7 @@ public class NetworkTopology {
     if (reader != null ) {
       //scan the array to find the local node & local rack node
       for(int i=0; i<nodes.length; i++) {
+        LOG.debug("Comparing reader: " + reader + " with: " + nodes[i]);
         if(tempIndex == 0 && reader == nodes[i]) { //local node
           //swap the local node and the node at position 0
           if( i != 0 ) {
@@ -858,12 +872,14 @@ public class NetworkTopology {
           tempIndex=1;
           if(localRackNode != -1 ) {
             if(localRackNode == 0) {
+              LOG.debug("Found local! Set localRackNode to: " + i);
               localRackNode = i;
             }
             break;
           }
         } else if(localRackNode == -1 && isOnSameRack(reader, nodes[i])) {
           //local rack
+          LOG.debug("On the same rack: reader: " + reader + " and "+ nodes[i] + " tempIndex: " + tempIndex);
           localRackNode = i;
           if(tempIndex != 0 ) break;
         }
@@ -871,6 +887,7 @@ public class NetworkTopology {
 
       // swap the local rack node and the node at position tempIndex
       if(localRackNode != -1 && localRackNode != tempIndex ) {
+        LOG.debug("Found local rack node: reader: " + reader + " and "+ nodes[localRackNode] + " tempIndex: " + tempIndex);
         swap(nodes, tempIndex, localRackNode);
         tempIndex++;
       }
@@ -878,6 +895,7 @@ public class NetworkTopology {
     
     // put a random node at position 0 if it is not a local/local-rack node
     if(tempIndex == 0 && localRackNode == -1 && nodes.length != 0) {
+      LOG.debug("Nothing found, going random: " + reader);
       swap(nodes, 0, r.nextInt(nodes.length));
     }
   }

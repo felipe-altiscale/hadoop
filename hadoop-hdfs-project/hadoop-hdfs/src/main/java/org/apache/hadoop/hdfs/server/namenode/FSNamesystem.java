@@ -249,6 +249,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -642,7 +643,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw ioe;
     }
     long timeTakenToLoadFSImage = now() - loadStart;
-    LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
+    LOG.debug("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
     NameNodeMetrics nnMetrics = NameNode.getNameNodeMetrics();
     if (nnMetrics != null) {
       nnMetrics.setFsImageLoadTime((int) timeTakenToLoadFSImage);
@@ -670,11 +671,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
     if (conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_ASYNC_KEY,
                         DFS_NAMENODE_AUDIT_LOG_ASYNC_DEFAULT)) {
-      LOG.info("Enabling async auditlog");
+      LOG.debug("Enabling async auditlog");
       enableAsyncAuditLog();
     }
     boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
-    LOG.info("fsLock is fair:" + fair);
+    LOG.debug("fsLock is fair:" + fair);
     fsLock = new FSNamesystemLock(fair);
     try {
       resourceRecheckInterval = conf.getLong(
@@ -825,7 +826,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   static RetryCache initRetryCache(Configuration conf) {
     boolean enable = conf.getBoolean(DFS_NAMENODE_ENABLE_RETRY_CACHE_KEY,
         DFS_NAMENODE_ENABLE_RETRY_CACHE_DEFAULT);
-    LOG.info("Retry cache on namenode is " + (enable ? "enabled" : "disabled"));
+    LOG.debug("Retry cache on namenode is " + (enable ? "enabled" : "disabled"));
     if (enable) {
       float heapPercent = conf.getFloat(
           DFS_NAMENODE_RETRY_CACHE_HEAP_PERCENT_KEY,
@@ -833,7 +834,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long entryExpiryMillis = conf.getLong(
           DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_KEY,
           DFS_NAMENODE_RETRY_CACHE_EXPIRYTIME_MILLIS_DEFAULT);
-      LOG.info("Retry cache will use " + heapPercent
+      LOG.debug("Retry cache will use " + heapPercent
           + " of total heap and retry cache entry expiry time is "
           + entryExpiryMillis + " millis");
       long entryExpiryNanos = entryExpiryMillis * 1000 * 1000;
@@ -894,7 +895,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         rollingUpgradeInfo = null;
       }
       final boolean needToSave = staleImage && !haEnabled && !isRollingUpgrade(); 
-      LOG.info("Need to save fs image? " + needToSave
+      LOG.debug("Need to save fs image? " + needToSave
           + " (staleImage=" + staleImage + ", haEnabled=" + haEnabled
           + ", isRollingUpgrade=" + isRollingUpgrade() + ")");
       if (needToSave) {
@@ -994,7 +995,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void startActiveServices() throws IOException {
     startingActiveService = true;
-    LOG.info("Starting services required for active state");
+    LOG.debug("Starting services required for active state");
     writeLock();
     try {
       FSEditLog editLog = dir.fsImage.getEditLog();
@@ -1005,7 +1006,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // May need to recover
         editLog.recoverUnclosedStreams();
         
-        LOG.info("Catching up to latest edits from old active before " +
+        LOG.debug("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs");
         editLogTailer.catchupDuringFailover();
         
@@ -1016,7 +1017,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         // Only need to re-process the queue, If not in SafeMode.
         if (!isInSafeMode()) {
-          LOG.info("Reprocessing replication and invalidation queues");
+          LOG.debug("Reprocessing replication and invalidation queues");
           initializeReplQueues();
         }
 
@@ -1027,7 +1028,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         }
         
         long nextTxId = dir.fsImage.getLastAppliedTxId() + 1;
-        LOG.info("Will take over writing edit logs at txnid " + 
+        LOG.debug("Will take over writing edit logs at txnid " + 
             nextTxId);
         editLog.setNextTxId(nextTxId);
 
@@ -2273,6 +2274,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       UnresolvedLinkException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
     assert hasWriteLock();
+    LOG.debug("Starting file write for client: " + clientMachine);
     // Verify that the destination does not exist as a directory already.
     final INodesInPath iip = dir.getINodesInPath4Write(src);
     final INode inode = iip.getLastINode();
@@ -2318,7 +2320,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkFsObjectLimit();
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-
+      LOG.debug("found clientNode: " + clientNode + " for clientMachine: " + clientMachine);
       INodeFile newNode = dir.addFile(src, permissions, replication, blockSize,
           holder, clientMachine, clientNode);
       if (newNode == null) {
@@ -2394,6 +2396,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
+      LOG.debug("ClientNode from clientMachine: " + clientMachine + " node: " + clientNode);
       return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
           true, iip.getLatestSnapshotId(), logRetryCache);
     } catch (IOException ie) {
@@ -2524,7 +2527,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (force) {
         // close now: no need to wait for soft lease expiration and 
         // close only the file src
-        LOG.info("recoverLease: " + lease + ", src=" + src +
+        LOG.debug("recoverLease: " + lease + ", src=" + src +
           " from client " + clientName);
         internalReleaseLease(lease, src, holder);
       } else {
@@ -2536,7 +2539,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // period, then start lease recovery.
         //
         if (lease.expiredSoftLimit()) {
-          LOG.info("startFile: recover " + lease + ", src=" + src + " client "
+          LOG.debug("startFile: recover " + lease + ", src=" + src + " client "
               + clientName);
           boolean isClosed = internalReleaseLease(lease, src, null);
           if(!isClosed)
@@ -2666,13 +2669,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       IOException {
     long blockSize;
     int replication;
-    DatanodeDescriptor clientNode = null;
+    Node clientNode = null;
+    String clientMachine = null;
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
           + src + " inodeId " +  fileId  + " for " + clientName);
     }
-
+    LOG.debug("BLOCK* NameSystem.getAdditionalBlock: "
+            + src + " inodeId " +  fileId  + " for " + clientName +" favoredNode: "+ favoredNodes);
     // Part I. Analyze the state of the file with respect to the input data.
     checkOperation(OperationCategory.READ);
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
@@ -2696,10 +2701,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             + maxBlocksPerFile);
       }
       blockSize = pendingFile.getPreferredBlockSize();
-      clientNode = pendingFile.getFileUnderConstructionFeature().getClientNode();
+      clientMachine = pendingFile.getFileUnderConstructionFeature()
+        .getClientMachine();
+      clientNode = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
+      LOG.debug("ClientNode if null: " + clientNode + " clientMachine: " + clientMachine);
       replication = pendingFile.getFileReplication();
     } finally {
       readUnlock();
+    }
+
+    if (clientNode == null) {
+      clientNode = getClientNode(clientMachine);
     }
 
     // choose targets for the new block to be allocated.
@@ -2753,6 +2765,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Return located block
     return makeLocatedBlock(newBlock, targets, offset);
+  }
+
+  /*
+   * Resolve clientmachine address to get a network location path
+  */
+  private Node getClientNode(String clientMachine) {
+      List<String> hosts = new ArrayList<String>(1);
+      hosts.add(clientMachine);
+      List<String> rName = getBlockManager().getDatanodeManager()
+          .resolveNetworkLocation(hosts);
+      Node clientNode = null;
+      if (rName != null) {
+        // Able to resolve clientMachine mapping.
+        // Create a temp node to findout the rack local nodes
+        clientNode = new NodeBase(rName.get(0) + NodeBase.PATH_SEPARATOR_STR
+            + clientMachine);
+      }
+    LOG.debug("Sending back clientNode: " + clientNode);
+    return clientNode;
   }
 
   INodesInPath analyzeFileState(String src,

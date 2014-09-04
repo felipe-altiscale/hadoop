@@ -70,12 +70,14 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
       StorageType storageType) throws NotEnoughReplicasException {
     // if no local machine, randomly choose one node
-    if (localMachine == null)
-      return chooseRandom(NodeBase.ROOT, excludedNodes, 
+    if (localMachine == null) {
+      LOG.debug("Going random as localMachine is null");
+      return chooseRandom(NodeBase.ROOT, excludedNodes,
           blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
-
+    }
     // otherwise try local machine first
     if (localMachine instanceof DatanodeDescriptor) {
+      LOG.debug("Trying localmachine " + localMachine);
       DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;
       if (excludedNodes.add(localMachine)) { // was not in the excluded list
         for(DatanodeStorageInfo localStorage : DFSUtil.shuffle(
@@ -89,10 +91,12 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
 
     // try a node on local node group
+    LOG.debug("Trying local nodegroup " + localMachine);
     DatanodeStorageInfo chosenStorage = chooseLocalNodeGroup(
         (NetworkTopologyWithNodeGroup)clusterMap, localMachine, excludedNodes, 
         blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
     if (chosenStorage != null) {
+      LOG.debug("Found storage!!! " + chosenStorage);
       return chosenStorage;
     }
     // try a node on local rack
@@ -165,8 +169,10 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         localMachine.getNetworkLocation());
     try {
       // randomly choose from remote racks
+      LOG.debug("Choose from remote racks: " + excludedNodes);
       chooseRandom(numOfReplicas, "~" + rackLocation, excludedNodes, blocksize,
           maxReplicasPerRack, results, avoidStaleNodes, storageType);
+      LOG.debug("Done choosing from remote racks: " + excludedNodes);
     } catch (NotEnoughReplicasException e) {
       // fall back to the local rack
       chooseRandom(numOfReplicas - (results.size() - oldNumOfReplicas),
@@ -187,7 +193,8 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
       List<DatanodeStorageInfo> results, boolean avoidStaleNodes,
       StorageType storageType) throws NotEnoughReplicasException {
     // no local machine, so choose a random machine
-    if (localMachine == null) {
+    if (localMachine == null || localMachine.getNetworkLocation().equals("/default-rack/default-nodegroup") ) {
+      LOG.debug("Random as localmachine is null");
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageType);
     }
