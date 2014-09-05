@@ -2669,7 +2669,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       IOException {
     long blockSize;
     int replication;
-    DatanodeDescriptor clientNode = null;
+    Node clientNode = null;
+    String clientMachine = null;
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.getAdditionalBlock: "
@@ -2700,11 +2701,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
             + maxBlocksPerFile);
       }
       blockSize = pendingFile.getPreferredBlockSize();
-      clientNode = pendingFile.getFileUnderConstructionFeature().getClientNode();
-      LOG.info("ClientNode if null: " + clientNode + " fileUnderConstruction: " + pendingFile.getFileUnderConstructionFeature());
+      clientMachine = pendingFile.getFileUnderConstructionFeature()
+        .getClientMachine();
+      clientNode = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
+      LOG.info("ClientNode if null: " + clientNode + " clientMachine: " + clientMachine);
       replication = pendingFile.getFileReplication();
     } finally {
       readUnlock();
+    }
+
+    if (clientNode == null) {
+      clientNode = getClientNode(clientMachine);
     }
 
     // choose targets for the new block to be allocated.
@@ -2758,6 +2765,25 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     // Return located block
     return makeLocatedBlock(newBlock, targets, offset);
+  }
+
+  /*
+   * Resolve clientmachine address to get a network location path
+  */
+  private Node getClientNode(String clientMachine) {
+      List<String> hosts = new ArrayList<String>(1);
+      hosts.add(clientMachine);
+      List<String> rName = getBlockManager().getDatanodeManager()
+          .resolveNetworkLocation(hosts);
+      Node clientNode = null;
+      if (rName != null) {
+        // Able to resolve clientMachine mapping.
+        // Create a temp node to findout the rack local nodes
+        clientNode = new NodeBase(rName.get(0) + NodeBase.PATH_SEPARATOR_STR
+            + clientMachine);
+      }
+
+    return clientNode;
   }
 
   INodesInPath analyzeFileState(String src,

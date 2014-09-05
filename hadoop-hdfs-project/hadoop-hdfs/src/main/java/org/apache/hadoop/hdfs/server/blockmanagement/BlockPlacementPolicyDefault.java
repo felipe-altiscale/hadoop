@@ -218,8 +218,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     // sorting nodes to form a pipeline
-    return getPipeline((writer==null)?localNode:writer,
-                       results.toArray(new DatanodeStorageInfo[results.size()]));
+    return getPipeline(
+            (writer != null && writer instanceof DatanodeDescriptor) ? writer
+                : localNode,
+            results.toArray(new DatanodeStorageInfo[results.size()]));
   }
 
   private int[] getMaxNodesPerRack(int numOfChosen, int numOfReplicas) {

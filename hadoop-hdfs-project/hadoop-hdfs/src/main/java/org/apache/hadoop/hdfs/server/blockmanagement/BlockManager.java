@@ -1428,7 +1428,7 @@ public class BlockManager {
    *      List, boolean, Set, long)
    */
   public DatanodeStorageInfo[] chooseTarget(final String src,
-      final int numOfReplicas, final DatanodeDescriptor client,
+      final int numOfReplicas, final Node client,
       final Set<Node> excludedNodes,
       final long blocksize, List<String> favoredNodes) throws IOException {
     List<DatanodeDescriptor> favoredDatanodeDescriptors = 

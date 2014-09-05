@@ -77,6 +77,7 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
     // otherwise try local machine first
     if (localMachine instanceof DatanodeDescriptor) {
+      LOG.info("Trying localmachine " + localMachine);
       DatanodeDescriptor localDataNode = (DatanodeDescriptor)localMachine;
       if (excludedNodes.add(localMachine)) { // was not in the excluded list
         for(DatanodeStorageInfo localStorage : DFSUtil.shuffle(
@@ -90,10 +91,12 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
 
     // try a node on local node group
+    LOG.info("Trying local nodegroup " + localMachine);
     DatanodeStorageInfo chosenStorage = chooseLocalNodeGroup(
         (NetworkTopologyWithNodeGroup)clusterMap, localMachine, excludedNodes, 
         blocksize, maxNodesPerRack, results, avoidStaleNodes, storageType);
     if (chosenStorage != null) {
+      LOG.info("Found storage!!! " + chosenStorage);
       return chosenStorage;
     }
     // try a node on local rack

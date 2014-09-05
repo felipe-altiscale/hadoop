@@ -686,6 +686,17 @@ public class DatanodeManager {
   }
 
   /**
+   * Resolve network locations for specified hosts
+   *
+   * @param names
+   * @return Network locations if available, Else returns null
+   */
+    public List<String> resolveNetworkLocation(List<String> names) {
+      // resolve its network location
+      List<String> rName = dnsToSwitchMapping.resolve(names);
+      return rName;
+    }
+  /**
    * Remove an already decommissioned data node who is neither in include nor
    * exclude hosts lists from the the list of live or dead nodes.  This is used
    * to not display an already decommssioned data node to the operators.
