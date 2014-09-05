@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
 /**
@@ -30,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
  */
 @InterfaceAudience.Private
 public class FileUnderConstructionFeature implements INode.Feature {
+  static final Log LOG = LogFactory.getLog(FileUnderConstructionFeature.class);
   private String clientName; // lease holder
   private final String clientMachine;
   // if client is a cluster node too.
@@ -40,6 +45,9 @@ public class FileUnderConstructionFeature implements INode.Feature {
       final DatanodeDescriptor clientNode) {
     this.clientName = clientName;
     this.clientMachine = clientMachine;
+    if (clientNode == null){
+      LOG.info("setting clientnode to null: " + Arrays.toString(Thread.currentThread().getStackTrace()));
+    }
     this.clientNode = clientNode;
   }
 

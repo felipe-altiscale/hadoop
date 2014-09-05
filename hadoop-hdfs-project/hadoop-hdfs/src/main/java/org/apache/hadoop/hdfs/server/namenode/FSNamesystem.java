@@ -249,6 +249,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -2319,7 +2320,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkFsObjectLimit();
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
-
+      LOG.info("found clientNode: " + clientNode + " for clientMachine: " + clientMachine);
       INodeFile newNode = dir.addFile(src, permissions, replication, blockSize,
           holder, clientMachine, clientNode);
       if (newNode == null) {
@@ -2395,6 +2396,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       final DatanodeDescriptor clientNode = 
           blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
+      LOG.info("ClientNode from clientMachine: " + clientMachine + " node: " + clientNode);
       return prepareFileForWrite(src, myFile, holder, clientMachine, clientNode,
           true, iip.getLatestSnapshotId(), logRetryCache);
     } catch (IOException ie) {
@@ -2699,7 +2701,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getFileUnderConstructionFeature().getClientNode();
-      LOG.info("ClientNode: " + clientNode);
+      LOG.info("ClientNode if null: " + clientNode + " fileUnderConstruction: " + pendingFile.getFileUnderConstructionFeature());
       replication = pendingFile.getFileReplication();
     } finally {
       readUnlock();
