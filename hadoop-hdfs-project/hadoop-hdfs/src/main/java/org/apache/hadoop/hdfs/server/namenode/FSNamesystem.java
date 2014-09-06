@@ -2782,7 +2782,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         clientNode = new NodeBase(rName.get(0) + NodeBase.PATH_SEPARATOR_STR
             + clientMachine);
       }
-
+    LOG.info("Sending back clientNode: " + clientNode);
     return clientNode;
   }
 

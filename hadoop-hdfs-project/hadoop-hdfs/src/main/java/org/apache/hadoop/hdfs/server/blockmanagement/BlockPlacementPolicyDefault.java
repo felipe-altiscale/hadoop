@@ -203,10 +203,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       // add localMachine and related nodes to excludedNodes
       addToExcludedNodes(storage.getDatanodeDescriptor(), excludedNodes);
     }
-      
+
     if (!clusterMap.contains(writer)) {
-      LOG.info("Nulling writer: " + writer);
-      writer = null;
+      LOG.info("NOT Nulling writer: " + writer);
     }
       
     boolean avoidStaleNodes = (stats != null
@@ -277,6 +276,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         writer = chooseLocalStorage(writer, excludedNodes, blocksize,
             maxNodesPerRack, results, avoidStaleNodes, storageType)
                 .getDatanodeDescriptor();
+        if (!clusterMap.contains(writer)) {
+          writer = null;
+        }
         LOG.info("Trying to choose local storage " + numOfReplicas);
         if (--numOfReplicas == 0) {
           return writer;
