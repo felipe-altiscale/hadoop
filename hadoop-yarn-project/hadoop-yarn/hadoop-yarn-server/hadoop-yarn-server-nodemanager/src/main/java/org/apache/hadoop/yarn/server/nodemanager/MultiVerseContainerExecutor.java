@@ -31,6 +31,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Map;
@@ -73,7 +74,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
 
   protected final FileContext lfs;
 
-  protected Map<String, ContainerExecutor> execs;
+  protected Map<String, ContainerExecutor> execs = new HashMap<String, ContainerExecutor>();
   public MultiVerseContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
@@ -111,6 +112,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
         try {
             exec = (ContainerExecutor) ReflectionUtils.newInstance(
                   conf.getClassByName(containerSubString), conf);
+            LOG.info("containerSubString " + containerSubString);
             execs.put(containerSubString, exec);
         } catch (ClassNotFoundException e) {
             // TODO Auto-generated catch block
