@@ -204,7 +204,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
         .append(" ")
         .append("--rm --net=host")
         .append(" ")
-        .append(" --name " + containerIdStr)
         .append(localDirMount)
         .append(logDirMount)
         .append(containerWorkDirMount)

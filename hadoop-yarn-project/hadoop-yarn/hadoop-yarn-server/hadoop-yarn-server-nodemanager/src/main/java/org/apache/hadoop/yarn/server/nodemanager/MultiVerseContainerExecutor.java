@@ -101,6 +101,10 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
     }
   }
 
+  public ContainerExecutor getContainerExecutorToPick(Map<String, String> env) {
+    return null;
+  }
+
   @Override
   public void startLocalizer(Path nmPrivateContainerTokensPath,
       InetSocketAddress nmAddr, String user, String appId, String locId,
