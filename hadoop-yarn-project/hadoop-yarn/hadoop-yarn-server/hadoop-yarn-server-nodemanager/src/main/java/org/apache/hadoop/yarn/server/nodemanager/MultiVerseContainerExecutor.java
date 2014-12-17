@@ -66,9 +66,12 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
 
   private static final int WIN_MAX_PATH = 260;
 
+  //TODO : THIS SHOULD COME FROM config
+  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "default";
+
   protected final FileContext lfs;
 
-  protected ContainerExecutor[] execs;
+  protected Map<String, ContainerExecutor> execs;
   public MultiVerseContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
@@ -81,8 +84,8 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
     this.lfs = lfs;
   }
 
-  public void setChildren(ContainerExecutor[] execs) {
-    this.execs = execs;
+  public void setChildren(Map<String, ContainerExecutor> execs) {
+    this.execs.putAll(execs);
   }
   protected void copyFile(Path src, Path dst, String owner) throws IOException {
     lfs.util().copy(src, dst);
@@ -96,13 +99,10 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   public void init() throws IOException {
     // nothing to do or verify here
     //launch init of list of containers
-    for (ContainerExecutor exec: execs) {
-      exec.init();
+    for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
+      entry.getValue().init();
     }
-  }
-
-  public ContainerExecutor getContainerExecutorToPick(Map<String, String> env) {
-    return null;
+    
   }
 
   @Override
@@ -110,11 +110,22 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       InetSocketAddress nmAddr, String user, String appId, String locId,
       LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
-    for (ContainerExecutor exec: execs) {
-      exec.startLocalizer(nmPrivateContainerTokensPath,nmAddr, user, appId, locId,
+    for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
+      entry.getValue().startLocalizer(nmPrivateContainerTokensPath,nmAddr, user, appId, locId,
         dirsHandler);
     }
-
+  }
+  
+  /** Returns the ContainerExecutor (e.g. LinuxContainerExecutor / 
+   * DockerContainerExecutor) to use
+   * 
+   * @param env The LaunchContext environment
+   */
+  public ContainerExecutor getContainerExecutorToPick(Map<String, String> env) {
+    String containerExecutorString = getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR);
+    containerExecutorString = (containerExecutorString == null || containerExecutorString.length() == 0) ?
+      env.get(DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR) : containerExecutorString;
+    return execs.get(containerExecutorString);
   }
 
   @Override
@@ -122,126 +133,10 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
       String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
-    
-    FsPermission dirPerm = new FsPermission(APPDIR_PERM);
-    ContainerId containerId = container.getContainerId();
-
-    // create container dirs on all disks
-    String containerIdStr = ConverterUtils.toString(containerId);
-    String appIdStr =
-        ConverterUtils.toString(
-            containerId.getApplicationAttemptId().
-                getApplicationId());
-    for (String sLocalDir : localDirs) {
-      Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
-      Path userdir = new Path(usersdir, user);
-      Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
-      Path appDir = new Path(appCacheDir, appIdStr);
-      Path containerDir = new Path(appDir, containerIdStr);
-      createDir(containerDir, dirPerm, true, user);
-    }
-
-    // Create the container log-dirs on all disks
-    createContainerLogDirs(appIdStr, containerIdStr, logDirs, user);
-
-    Path tmpDir = new Path(containerWorkDir,
-        YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
-    createDir(tmpDir, dirPerm, false, user);
-
-
-    // copy container tokens to work dir
-    Path tokenDst =
-      new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
-    copyFile(nmPrivateTokensPath, tokenDst, user);
-
-    // copy launch script to work dir
-    Path launchDst =
-        new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-    copyFile(nmPrivateContainerScriptPath, launchDst, user);
-
-    // Create new local launch wrapper script
-    LocalWrapperScriptBuilder sb = getLocalWrapperScriptBuilder(
-        containerIdStr, containerWorkDir); 
-
-    // Fail fast if attempting to launch the wrapper script would fail due to
-    // Windows path length limitation.
-    if (Shell.WINDOWS &&
-        sb.getWrapperScriptPath().toString().length() > WIN_MAX_PATH) {
-      throw new IOException(String.format(
-        "Cannot launch container using script at path %s, because it exceeds " +
-        "the maximum supported path length of %d characters.  Consider " +
-        "configuring shorter directories in %s.", sb.getWrapperScriptPath(),
-        WIN_MAX_PATH, YarnConfiguration.NM_LOCAL_DIRS));
-    }
-
-    Path pidFile = getPidFilePath(containerId);
-    if (pidFile != null) {
-      sb.writeLocalWrapperScript(launchDst, pidFile);
-    } else {
-      LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
-      return ExitCode.TERMINATED.getExitCode();
-    }
-    
-    // create log dir under app
-    // fork script
-    Shell.CommandExecutor shExec = null;
-    try {
-      setScriptExecutable(launchDst, user);
-      setScriptExecutable(sb.getWrapperScriptPath(), user);
-
-      shExec = buildCommandExecutor(sb.getWrapperScriptPath().toString(),
-          containerIdStr, user, pidFile,
-          new File(containerWorkDir.toUri().getPath()),
-          container.getLaunchContext().getEnvironment());
-      
-      if (isContainerActive(containerId)) {
-        shExec.execute();
-      }
-      else {
-        LOG.info("Container " + containerIdStr +
-            " was marked as inactive. Returning terminated error");
-        return ExitCode.TERMINATED.getExitCode();
-      }
-    } catch (IOException e) {
-      if (null == shExec) {
-        return -1;
-      }
-      int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
-      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
-      // terminated/killed forcefully. In all other cases, log the
-      // container-executor's output
-      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
-          && exitCode != ExitCode.TERMINATED.getExitCode()) {
-        LOG.warn("Exception from container-launch with container ID: "
-            + containerId + " and exit code: " + exitCode , e);
-
-        StringBuilder builder = new StringBuilder();
-        builder.append("Exception from container-launch.\n");
-        builder.append("Container id: " + containerId + "\n");
-        builder.append("Exit code: " + exitCode + "\n");
-        if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
-          builder.append("Exception message: " + e.getMessage() + "\n");
-        }
-        builder.append("Stack trace: "
-            + StringUtils.stringifyException(e) + "\n");
-        if (!shExec.getOutput().isEmpty()) {
-          builder.append("Shell output: " + shExec.getOutput() + "\n");
-        }
-        String diagnostics = builder.toString();
-        logOutput(diagnostics);
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            diagnostics));
-      } else {
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            "Container killed on request. Exit code is " + exitCode));
-      }
-      return exitCode;
-    } finally {
-      if (shExec != null) shExec.close();
-    }
-    return 0;
+    // Simply pick the container executor and call its launchContainer
+    return getContainerExecutorToPick(container.getLaunchContext().getEnvironment())
+      .launchContainer(container, nmPrivateContainerScriptPath, 
+        nmPrivateTokensPath, user, appId, containerWorkDir, localDirs, logDirs);
   }
 
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath, 

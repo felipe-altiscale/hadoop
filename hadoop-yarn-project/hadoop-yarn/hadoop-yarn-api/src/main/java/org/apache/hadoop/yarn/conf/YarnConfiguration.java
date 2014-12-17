@@ -907,6 +907,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
           "/usr/bin/docker";
 
+  /** The container executor selected by the user to run the application */
+  public static final String NM_MULTIVERSE_CONTAINER_EXECUTOR = NM_PREFIX 
+    + "multiverse-container-executor";
+  
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
