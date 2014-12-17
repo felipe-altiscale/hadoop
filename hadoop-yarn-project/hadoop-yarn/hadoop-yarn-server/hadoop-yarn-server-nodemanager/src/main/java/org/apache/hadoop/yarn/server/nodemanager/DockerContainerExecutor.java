@@ -101,9 +101,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
       YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
-    String[] arr = dockerExecutor.split("\\s");
-
-    if (!new File(arr[0]).exists()) {
+    if (!new File(dockerExecutor).exists()) {
       throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
     }
   }
@@ -225,7 +223,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     
     ShellCommandExecutor shExec = null;
-    String[] command = null;
     try {
       lfs.setPermission(launchDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
@@ -233,7 +230,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      command = getRunCommand(sb.getWrapperScriptPath().toString(),
+      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
         containerIdStr, userName, pidFile, this.getConf());
       if (LOG.isDebugEnabled()) {
         LOG.debug("launchContainer: " + commandStr + " " + Joiner.on(" ").join(command));
@@ -264,8 +261,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
             + containerId + " and exit code: " + exitCode, e);
         logOutput(shExec.getOutput());
         String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput() + "\n"
-          + "launchContainerError: " + commandStr + " " + Joiner.on(" ").join(command);
+            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
       } else {
@@ -512,7 +508,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
         pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
         pout.println(dockerCommand + " bash \"" +
           launchDst.toUri().getPath().toString() + "\"");
-        LOG.debug("Main Script: " + out.toString());
       } finally {
         IOUtils.cleanup(LOG, pout, out);
       }
