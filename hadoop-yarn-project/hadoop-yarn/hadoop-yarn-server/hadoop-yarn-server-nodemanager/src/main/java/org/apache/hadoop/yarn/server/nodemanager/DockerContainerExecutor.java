@@ -204,6 +204,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         .append(" ")
         .append("--rm --net=host")
         .append(" ")
+        .append(" --name " + containerIdStr)
         .append(localDirMount)
         .append(logDirMount)
         .append(containerWorkDirMount)
@@ -511,6 +512,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
         pout.println(dockerCommand + " bash \"" +
           launchDst.toUri().getPath().toString() + "\"");
+        LOG.debug("Main Script: " + out.toString());
       } finally {
         IOUtils.cleanup(LOG, pout, out);
       }
