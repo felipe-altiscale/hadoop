@@ -209,21 +209,9 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   @Override
   public void deleteAsUser(String user, Path subDir, Path... baseDirs)
       throws IOException, InterruptedException {
-    if (baseDirs == null || baseDirs.length == 0) {
-      LOG.info("Deleting absolute path : " + subDir);
-      if (!lfs.delete(subDir, true)) {
-        //Maybe retry
-        LOG.warn("delete returned false for path: [" + subDir + "]");
+      for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
+          entry.getValue().deleteAsUser(user, subDir, baseDirs);
       }
-      return;
-    }
-    for (Path baseDir : baseDirs) {
-      Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
-      LOG.info("Deleting path : " + del);
-      if (!lfs.delete(del, true)) {
-        LOG.warn("delete returned false for path: [" + del + "]");
-      }
-    }
   }
 
   /** Permissions for user dir.
