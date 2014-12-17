@@ -225,6 +225,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     
     ShellCommandExecutor shExec = null;
+    String[] command = null;
     try {
       lfs.setPermission(launchDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
@@ -232,7 +233,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
+      command = getRunCommand(sb.getWrapperScriptPath().toString(),
         containerIdStr, userName, pidFile, this.getConf());
       if (LOG.isDebugEnabled()) {
         LOG.debug("launchContainer: " + commandStr + " " + Joiner.on(" ").join(command));

@@ -68,21 +68,22 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
 
   protected final FileContext lfs;
 
-  protected final ContainerExecutor[] execs;
+  protected ContainerExecutor[] execs;
   public MultiVerseContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
-      execs = null;
     } catch (UnsupportedFileSystemException e) {
       throw new RuntimeException(e);
     }
   }
 
-  MultiVerseContainerExecutor(FileContext lfs, ContainerExecutor[] execs) {
-    this.execs = execs;
+  MultiVerseContainerExecutor(FileContext lfs) {
     this.lfs = lfs;
   }
 
+  public void setChildren(ContainerExecutor[] execs) {
+    this.execs = execs;
+  }
   protected void copyFile(Path src, Path dst, String owner) throws IOException {
     lfs.util().copy(src, dst);
   }
