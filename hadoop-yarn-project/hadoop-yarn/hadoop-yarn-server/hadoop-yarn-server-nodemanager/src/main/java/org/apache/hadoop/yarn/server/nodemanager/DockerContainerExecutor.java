@@ -263,7 +263,8 @@ public class DockerContainerExecutor extends ContainerExecutor {
             + containerId + " and exit code: " + exitCode, e);
         logOutput(shExec.getOutput());
         String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
+            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput() + "\n"
+          + "launchContainerError: " + commandStr + " " + Joiner.on(" ").join(command);
         container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
             diagnostics));
       } else {
