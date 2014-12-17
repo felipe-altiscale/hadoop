@@ -911,6 +911,9 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_MULTIVERSE_CONTAINER_EXECUTOR = NM_PREFIX 
     + "multiverse-container-executor";
   
+  public static final String NM_MULTIVERSE_CONTAINER_EXECUTOR_CLASSES = 
+      NM_PREFIX + "multiverse-container-executor.classes";
+
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";

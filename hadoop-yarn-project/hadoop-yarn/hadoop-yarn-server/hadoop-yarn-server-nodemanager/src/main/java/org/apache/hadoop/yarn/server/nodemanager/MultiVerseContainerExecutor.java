@@ -34,6 +34,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Map;
+import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.CommandExecutor;
@@ -98,6 +100,25 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   @Override
   public void init() throws IOException {
     // nothing to do or verify here
+    Configuration conf = getConf();
+    // parsing and add in map
+    String containerExecutorString = getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR_CLASSES);
+    StringTokenizer containerSplit = new StringTokenizer(containerExecutorString, ",");
+    while (containerSplit.hasMoreElements()) {
+      String containerSubString = containerSplit.nextToken().trim();
+      if (containerSubString.length() != 0) {
+          ContainerExecutor exec;
+        try {
+            exec = (ContainerExecutor) ReflectionUtils.newInstance(
+                  conf.getClassByName(containerSubString), conf);
+            execs.put(containerSubString, exec);
+        } catch (ClassNotFoundException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+      }
+    }
+      
     //launch init of list of containers
     for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
       entry.getValue().init();
