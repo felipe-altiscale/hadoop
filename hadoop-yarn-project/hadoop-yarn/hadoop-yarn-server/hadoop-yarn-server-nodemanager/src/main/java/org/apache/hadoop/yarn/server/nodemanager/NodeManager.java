@@ -201,12 +201,12 @@ public class NodeManager extends CompositeService
     recoverTokens(nmTokenSecretManager, containerTokenSecretManager);
     
     this.aclsManager = new ApplicationACLsManager(conf);
-
+// create an array here
     ContainerExecutor exec = ReflectionUtils.newInstance(
         conf.getClass(YarnConfiguration.NM_CONTAINER_EXECUTOR,
           DefaultContainerExecutor.class, ContainerExecutor.class), conf);
     try {
-      exec.init();
+      exec.init(); //init an array
     } catch (IOException e) {
       throw new YarnRuntimeException("Failed to initialize container executor", e);
     }    
@@ -231,7 +231,7 @@ public class NodeManager extends CompositeService
 
     containerManager =
         createContainerManager(context, exec, del, nodeStatusUpdater,
-        this.aclsManager, dirsHandler);
+        this.aclsManager, dirsHandler); //containermanager will handle an array
     addService(containerManager);
     ((NMContext) context).setContainerManager(containerManager);
 

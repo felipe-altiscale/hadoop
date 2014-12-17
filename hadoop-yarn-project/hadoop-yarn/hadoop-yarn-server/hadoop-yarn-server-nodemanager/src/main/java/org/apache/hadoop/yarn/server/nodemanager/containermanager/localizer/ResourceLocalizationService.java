@@ -181,7 +181,7 @@ public class ResourceLocalizationService extends CompositeService
       LocalDirsHandlerService dirsHandler, Context context) {
 
     super(ResourceLocalizationService.class.getName());
-    this.exec = exec;
+    this.exec = exec; //will take an array?
     this.dispatcher = dispatcher;
     this.delService = delService;
     this.dirsHandler = dirsHandler;
@@ -1097,7 +1097,7 @@ public class ResourceLocalizationService extends CompositeService
                   context.getContainerId().
                   getApplicationAttemptId().getApplicationId()),
               localizerId,
-              dirsHandler);
+              dirsHandler); //array of executors
         } else {
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));
