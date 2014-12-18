@@ -290,6 +290,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
     exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
     exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
+    exclusionSet.add("yarn.nodemanager.multiverse-container-executor");
 
     if (environment != null) {
       for (Map.Entry<String,String> env : environment.entrySet()) {

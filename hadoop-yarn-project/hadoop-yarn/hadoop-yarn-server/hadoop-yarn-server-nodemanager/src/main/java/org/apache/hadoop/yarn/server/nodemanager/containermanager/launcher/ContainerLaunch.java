@@ -298,6 +298,7 @@ public class ContainerLaunch implements Callable<Integer> {
         ret = ExitCode.TERMINATED.getExitCode();
       }
       else {
+
         exec.activateContainer(containerID, pidFilePath);
         ret = exec.launchContainer(container, nmPrivateContainerScriptPath,
                 nmPrivateTokensPath, user, appIdStr, containerWorkDir,

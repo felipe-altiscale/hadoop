@@ -1091,8 +1091,7 @@ public class ResourceLocalizationService extends CompositeService
         List<String> localDirs = getInitializedLocalDirs();
         List<String> logDirs = getInitializedLogDirs();
         if (dirsHandler.areDisksHealthy()) {
-
-          exec.getContainerExecutorToPick(
+         exec.getContainerExecutorToPick(
             context.getContainerLaunchContextEnvironment())
             .startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
               context.getUser(),
