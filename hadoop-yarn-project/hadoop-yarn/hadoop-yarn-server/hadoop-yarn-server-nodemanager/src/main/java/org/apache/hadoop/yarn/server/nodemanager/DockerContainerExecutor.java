@@ -101,7 +101,9 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
       YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
-    if (!new File(dockerExecutor).exists()) {
+    String[] arr = dockerExecutor.split("\\s");
+
+    if (!new File(arr[0]).exists()) {
       throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
     }
   }
