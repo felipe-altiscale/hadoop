@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +62,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 public class MultiVerseContainerExecutor extends ContainerExecutor {
 
