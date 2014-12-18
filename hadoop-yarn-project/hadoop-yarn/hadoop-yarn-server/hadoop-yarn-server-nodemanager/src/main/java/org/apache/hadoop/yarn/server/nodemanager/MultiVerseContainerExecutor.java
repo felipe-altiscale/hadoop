@@ -133,10 +133,8 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       InetSocketAddress nmAddr, String user, String appId, String locId,
       LocalDirsHandlerService dirsHandler)
       throws IOException, InterruptedException {
-    for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
-      entry.getValue().startLocalizer(nmPrivateContainerTokensPath,nmAddr, user, appId, locId,
-        dirsHandler);
-    }
+      throw new UnsupportedOperationException("This is only supported for children");
+
   }
 
   /** Returns the ContainerExecutor (e.g. LinuxContainerExecutor /
@@ -186,12 +184,32 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   public boolean isContainerProcessAlive(String user, String pid)
       throws IOException {
 
-    for (ContainerExecutor exec: execs){
+    for (ContainerExecutor exec: execs.values()){
       if (exec.isContainerProcessAlive(user, pid)) {
         return true;
       }
     }
     return false;
+  }
+
+  /**
+   * Returns true if the process with the specified pid is alive.
+   *
+   * @param pid String pid
+   * @return boolean true if the process is alive
+   */
+  @VisibleForTesting
+  public static boolean containerIsAlive(String pid) throws IOException {
+    try {
+      new ShellCommandExecutor(Shell.getCheckProcessIsAliveCommand(pid))
+        .execute();
+      // successful execution means process is alive
+      return true;
+    }
+    catch (ExitCodeException e) {
+      // failure (non-zero exit code) means process is not alive
+      return false;
+    }
   }
 
   /**

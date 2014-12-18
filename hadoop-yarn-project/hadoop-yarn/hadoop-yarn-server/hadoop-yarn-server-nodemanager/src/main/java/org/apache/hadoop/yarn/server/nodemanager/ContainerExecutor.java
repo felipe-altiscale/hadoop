@@ -154,7 +154,7 @@ public abstract class ContainerExecutor implements Configurable {
   public abstract boolean isContainerProcessAlive(String user, String pid)
       throws IOException;
 
-  public ContainerExecutor getContainerExecutorToPick(Map<String, String> env){return null;}
+  public ContainerExecutor getContainerExecutorToPick(Map<String, String> env){return this;}
   /**
    * Recover an already existing container. This is a blocking call and returns
    * only when the container exits.  Note that the container must have been
