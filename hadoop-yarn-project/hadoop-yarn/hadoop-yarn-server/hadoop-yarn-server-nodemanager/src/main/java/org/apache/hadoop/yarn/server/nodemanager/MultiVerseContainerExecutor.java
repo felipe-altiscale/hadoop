@@ -70,7 +70,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   private static final int WIN_MAX_PATH = 260;
 
   //TODO : THIS SHOULD COME FROM config
-  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor";
+  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "org.apache.hadoop.yarn.server.nodemanager.DockerContainerExecutor";
 
   protected final FileContext lfs;
 
@@ -146,9 +146,10 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
    */
   @Override
   public ContainerExecutor getContainerExecutorToPick(Map<String, String> env) {
-    String containerExecutorString = getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR);
+    String containerExecutorString = env.get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR);
     containerExecutorString = (containerExecutorString == null || containerExecutorString.length() == 0) ?
       DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR : containerExecutorString;
+    LOG.debug("Env: "+env +" Table: " + execs + " key: " + containerExecutorString + " value: " + execs.get(containerExecutorString));
     return execs.get(containerExecutorString);
   }
 
@@ -157,7 +158,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
       String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
-    containersToExecs.put(container.getContainerId(), getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR));
+    containersToExecs.put(container.getContainerId(), getContainerExecutorToPick(container.getLaunchContext().getEnvironment()));
     // Simply pick the container executor and call its launchContainer
     return getContainerExecutorToPick(container.getLaunchContext().getEnvironment())
       .launchContainer(container, nmPrivateContainerScriptPath,
