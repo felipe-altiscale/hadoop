@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.jboss.netty.util.internal.ConcurrentHashMap;
 
 public class MultiVerseContainerExecutor extends ContainerExecutor {
 
@@ -74,8 +75,8 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
 
   protected final FileContext lfs;
 
-  protected Map<String, ContainerExecutor> execs = new HashMap<String, ContainerExecutor>();
-  protected Map<ContainerId, ContainerExecutor> containersToExecs = new HashMap<ContainerId, ContainerExecutor>();
+  protected Map<String, ContainerExecutor> execs = new ConcurrentHashMap<String, ContainerExecutor>();
+  protected Map<ContainerId, ContainerExecutor> containersToExecs = new ConcurrentHashMap<ContainerId, ContainerExecutor>();
 
   public MultiVerseContainerExecutor() {
     try {
@@ -158,6 +159,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
       String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
+    LOG.debug("container: " + container);
     containersToExecs.put(container.getContainerId(), getContainerExecutorToPick(container.getLaunchContext().getEnvironment()));
     // Simply pick the container executor and call its launchContainer
     return getContainerExecutorToPick(container.getLaunchContext().getEnvironment())
@@ -175,7 +177,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   @Override
   public boolean signalContainer(String user, String pid, Signal signal)
       throws IOException {
-
+    LOG.debug("signalContainer: " + user + " " + pid + " " + signal);
     //iterate through all containers to find the pid
     for(Map.Entry<ContainerId, ContainerExecutor> entry: containersToExecs.entrySet()) {
       if(pid.equals(getProcessId(entry.getKey()))){
@@ -189,7 +191,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   @Override
   public boolean isContainerProcessAlive(String user, String pid)
       throws IOException {
-
+    LOG.debug("isAlive: " + user + " " + pid);
     for (ContainerExecutor exec: execs.values()){
       if (exec.isContainerProcessAlive(user, pid)) {
         return true;
@@ -201,6 +203,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   @Override
   public void deleteAsUser(String user, Path subDir, Path... baseDirs)
       throws IOException, InterruptedException {
+    LOG.debug("deleteAsUser: " + user + " " + subDir);
       for (Map.Entry<String, ContainerExecutor> entry: execs.entrySet()) {
           entry.getValue().deleteAsUser(user, subDir, baseDirs);
       }
