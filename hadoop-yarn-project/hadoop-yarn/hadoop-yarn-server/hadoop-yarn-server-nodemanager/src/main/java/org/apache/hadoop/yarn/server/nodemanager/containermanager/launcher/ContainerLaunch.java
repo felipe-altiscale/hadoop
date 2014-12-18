@@ -269,7 +269,9 @@ public class ContainerLaunch implements Callable<Integer> {
           localResources, nmPrivateClasspathJarDir);
         
         // Write out the environment
-        exec.writeLaunchEnv(containerScriptOutStream, environment, localResources,
+        exec.getContainerExecutorToPick(
+          launchContext.getEnvironment())
+          .writeLaunchEnv(containerScriptOutStream, environment, localResources,
             launchContext.getCommands());
         
         // /////////// End of writing out container-script
@@ -299,7 +301,9 @@ public class ContainerLaunch implements Callable<Integer> {
       }
       else {
 
-        exec.activateContainer(containerID, pidFilePath);
+        exec.getContainerExecutorToPick(
+          launchContext.getEnvironment())
+          .activateContainer(containerID, pidFilePath);
         ret = exec.launchContainer(container, nmPrivateContainerScriptPath,
                 nmPrivateTokensPath, user, appIdStr, containerWorkDir,
                 localDirs, logDirs);
@@ -312,7 +316,8 @@ public class ContainerLaunch implements Callable<Integer> {
       return ret;
     } finally {
       completed.set(true);
-      exec.deactivateContainer(containerID);
+      exec.getContainerExecutorToPick(
+        launchContext.getEnvironment()).deactivateContainer(containerID);
       try {
         context.getNMStateStore().storeContainerCompleted(containerID, ret);
       } catch (IOException e) {
