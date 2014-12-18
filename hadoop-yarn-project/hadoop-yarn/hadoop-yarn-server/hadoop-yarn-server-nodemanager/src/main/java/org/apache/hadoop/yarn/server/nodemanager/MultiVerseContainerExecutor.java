@@ -70,7 +70,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   private static final int WIN_MAX_PATH = 260;
 
   //TODO : THIS SHOULD COME FROM config
-  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "default";
+  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "org.apache.hadoop.yarn.server.nodemanager.DockerContainerExecutor";
 
   protected final FileContext lfs;
 
