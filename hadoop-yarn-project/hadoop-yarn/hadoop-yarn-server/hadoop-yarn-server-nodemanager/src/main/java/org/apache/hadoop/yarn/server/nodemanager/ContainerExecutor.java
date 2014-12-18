@@ -81,9 +81,6 @@ public abstract class ContainerExecutor implements Configurable {
    */
   public abstract void init() throws IOException;
 
-  public void setChildren(ContainerExecutor[] execs){
-
-  }
   /**
    * On Windows the ContainerLaunch creates a temporary special jar manifest of 
    * other jars to workaround the CLASSPATH length. In a  secure cluster this 

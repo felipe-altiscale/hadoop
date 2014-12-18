@@ -1093,7 +1093,8 @@ public class ResourceLocalizationService extends CompositeService
         if (dirsHandler.areDisksHealthy()) {
 
           exec.getContainerExecutorToPick(
-            context.getContainerLaunchContextEnvironment()).startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
+            context.getContainerLaunchContextEnvironment())
+            .startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
               context.getUser(),
               ConverterUtils.toString(
                   context.getContainerId().

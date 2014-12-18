@@ -70,7 +70,7 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   private static final int WIN_MAX_PATH = 260;
 
   //TODO : THIS SHOULD COME FROM config
-  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "org.apache.hadoop.yarn.server.nodemanager.DockerContainerExecutor";
+  private static final String DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR = "org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor";
 
   protected final FileContext lfs;
 
@@ -142,10 +142,11 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
    *
    * @param env The LaunchContext environment
    */
+  @Override
   public ContainerExecutor getContainerExecutorToPick(Map<String, String> env) {
     String containerExecutorString = getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR);
     containerExecutorString = (containerExecutorString == null || containerExecutorString.length() == 0) ?
-      env.get(DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR) : containerExecutorString;
+      DEFAULT_MULTIVERSE_CONTAINER_EXECUTOR : containerExecutorString;
     return execs.get(containerExecutorString);
   }
 
