@@ -75,6 +75,8 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
   protected final FileContext lfs;
 
   protected Map<String, ContainerExecutor> execs = new HashMap<String, ContainerExecutor>();
+  protected Map<ContainerId, ContainerExecutor> containersToExecs = new HashMap<ContainerId, ContainerExecutor>();
+
   public MultiVerseContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
@@ -155,30 +157,32 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
       String user, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
+    containersToExecs.put(container.getContainerId(), getConf().get(YarnConfiguration.NM_MULTIVERSE_CONTAINER_EXECUTOR));
     // Simply pick the container executor and call its launchContainer
     return getContainerExecutorToPick(container.getLaunchContext().getEnvironment())
       .launchContainer(container, nmPrivateContainerScriptPath,
         nmPrivateTokensPath, user, appId, containerWorkDir, localDirs, logDirs);
   }
 
+  private ContainerExecutor getExec(String containerId) {
+    if (containersToExecs.containsKey(containerId)) {
+      return execs.get(containersToExecs.get(containerId));
+    }
+    return null;
+  }
 
   @Override
   public boolean signalContainer(String user, String pid, Signal signal)
       throws IOException {
-    LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
-        + " as user " + user);
-    if (!containerIsAlive(pid)) {
-      return false;
-    }
-    try {
-      killContainer(pid, signal);
-    } catch (IOException e) {
-      if (!containerIsAlive(pid)) {
-        return false;
+
+    //iterate through all containers to find the pid
+    for(Map.Entry<ContainerId, ContainerExecutor> entry: containersToExecs.entrySet()) {
+      if(pid.equals(getProcessId(entry.getKey()))){
+        return entry.getValue().signalContainer(user, pid, signal);
       }
-      throw e;
     }
-    return true;
+
+    return false;
   }
 
   @Override
@@ -191,38 +195,6 @@ public class MultiVerseContainerExecutor extends ContainerExecutor {
       }
     }
     return false;
-  }
-
-  /**
-   * Returns true if the process with the specified pid is alive.
-   *
-   * @param pid String pid
-   * @return boolean true if the process is alive
-   */
-  @VisibleForTesting
-  public static boolean containerIsAlive(String pid) throws IOException {
-    try {
-      new ShellCommandExecutor(Shell.getCheckProcessIsAliveCommand(pid))
-        .execute();
-      // successful execution means process is alive
-      return true;
-    }
-    catch (ExitCodeException e) {
-      // failure (non-zero exit code) means process is not alive
-      return false;
-    }
-  }
-
-  /**
-   * Send a specified signal to the specified pid
-   *
-   * @param pid the pid of the process [group] to signal.
-   * @param signal signal to send
-   * (for logging).
-   */
-  protected void killContainer(String pid, Signal signal) throws IOException {
-    new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
-      .execute();
   }
 
   @Override
