@@ -269,6 +269,8 @@ Release 2.7.0 - 2015-04-20
     HADOOP-10530 Make hadoop build on Java7+ only (stevel)
 
   NEW FEATURES
+    HADOOP-3733 "s3:" URLs break when Secret Key contains a slash, even if encoded
+    (Altiscale patch, dchaiken, raviprak)
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
 

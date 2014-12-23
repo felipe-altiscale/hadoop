@@ -152,7 +152,7 @@ public class S3AFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
 
-    uri = URI.create(name.getScheme() + "://" + name.getAuthority());
+    uri = URI.create(name.getScheme() + "://" + name.getRawAuthority());
     workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this.uri,
         this.getWorkingDirectory());
 
@@ -165,7 +165,7 @@ public class S3AFileSystem extends FileSystem {
       int index = userInfo.indexOf(':');
       if (index != -1) {
         accessKey = userInfo.substring(0, index);
-        secretKey = userInfo.substring(index + 1);
+        secretKey = userInfo.substring(index + 1).replace("%2F","/");
       } else {
         accessKey = userInfo;
       }
