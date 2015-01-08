@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+  -->
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="/static/bootstrap-3.0.2/css/bootstrap.min.css" />
+<link rel="stylesheet" type="text/css" href="/static/hadoop.css" />
+<script type="text/javascript" src="/static/angularjs/angular.js"></script>
+
+<title>Browsing HDFS</title>
+</head>
+<body ng-app="fileBrowserApp">
+
+    <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
+ 	  <div class="modal-dialog" ng-controller="FileBrowserModalCtrl">
+			<div class="modal-content">
+
+				<div class="modal-header"><button type="button"
+                       class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title" id="file-info-title">File information</h4>
+				</div>
+                <div class="modal-body" id="file-info-body">
+
+                    <a id="file-info-download">Download</a>
+					<!--<a id="file-info-preview" style="cursor:pointer">Tail the file (last 32K)</a>-->
+					<hr />
+
+                    <div class="panel panel-success" id="file-perm-blockinfo-panel">
+                        <div class="panel-heading">Permissions</div>
+                        <div class="panel-body" id="file-perm-blockinfo-body">
+                            <table>
+                                <tr><td>File Owner may:</td>
+                                    <td><label class="checkbox-inline" for="perm-ur">Read</label>
+                                        <input type="checkbox" id="perm-ur" ng-model="perm.ur"></td>
+                                    <td><label class="checkbox-inline" for="perm-uw">Write</label>
+                                        <input type="checkbox" id="perm-uw" ng-model="perm.uw"></td>
+                                    <td><label class="checkbox-inline" for="perm-ux">Execute</label>
+                                        <input type="checkbox" id="perm-ux" ng-model="perm.ux"></td>
+                                </tr>
+                                <tr><td>Group Members may:</td>
+                                    <td><label class="checkbox-inline" for="perm-gr">Read</label>
+                                        <input type="checkbox" id="perm-gr" ng-model="perm.gr"></td>
+                                    <td><label class="checkbox-inline" for="perm-gw">Write</label>
+                                        <input type="checkbox" id="perm-gw" ng-model="perm.gw"></td>
+                                    <td><label class="checkbox-inline" for="perm-gx">Execute</label>
+                                        <input type="checkbox" id="perm-gx" ng-model="perm.gx"></td>
+                                </tr>
+                                <tr><td>Other Users may:</td>
+                                    <td><label class="checkbox-inline" for="perm-ur">Read</label>
+                                        <input type="checkbox" id="perm-or" ng-model="perm.or"></td>
+                                    <td><label class="checkbox-inline" for="perm-uw">Write</label>
+                                        <input type="checkbox" id="perm-ow" ng-model="perm.ow"></td>
+                                    <td><label class="checkbox-inline" for="perm-ux">Execute</label>
+                                        <input type="checkbox" id="perm-ox" ng-model="perm.ox"></td>
+                                </tr>
+                            </table>
+                            <button type="button" class="btn btn-primary"
+                               ng-click="setPermission(getPath(),getPermission())"
+                                    >Set Permission</button>
+                        </div>
+                    </div>
+
+                    <div class="panel panel-success" id="file-info-blockinfo-panel">
+						<div class="panel-heading">Block information --
+						  <select class="btn btn-default" id="file-info-blockinfo-list"></select>
+						</div>
+						<div class="panel-body" id="file-info-blockinfo-body"></div>
+					</div>
+					<div class="panel panel-info" id="file-info-tail" style="display:none">
+						<div class="panel-heading">File contents</div>
+						<div class="panel-body">
+						  <div class="input-group-sm">
+						    <textarea class="form-control" style="height: 150px" id="file-info-preview-body"></textarea>
+					    </div>
+				    </div>
+				  </div>
+			  </div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+  </div>
+
+  <div class="modal" id="create-directory" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header"><button type="button"
+                  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                  <h4 class="modal-title" id="dir-create-title">Create Directory</h4>
+              </div>
+              <div class="modal-body" id="dir-create-body">
+                <div class="form-group">
+                  <div class="col-sm-10">
+                    <div class="input-group">
+                      <span class="input-group-addon" id="new_directory_pwd"></span>
+                      <input type="text" class="form-control" id="new_directory" placeholder="New Direcotry Name">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn" data-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-success" id="create-directory-button" data-complete-text="Creating...">Create</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div class="modal" id="upload-file" tabindex="-1" role="dialog" aria-hidden="true">
+      <div class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header"><button type="button"
+                  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                  <h4 class="modal-title" id="file-upload-title">Upload File</h4>
+              </div>
+              <div class="modal-body" id="file-upload-body">
+                <input id="upload-file-input" type="file" class="file" multiple=false>
+              </div>
+              <div class="modal-footer">
+                  <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+                  <button type="button" class="btn btn-success" id="upload-file-button" data-complete-text="Uploading...">Upload</button>
+              </div>
+          </div>
+      </div>
+  </div>
+
+  <div class="container" ng-controller="FileBrowserMainCtrl">
+      <div class="page-header">
+        <h1>Browse Directory</h1>
+          <div ng-controller="LoginCtrl">
+              User ID: <input id="userId" ng-model="userSettings.userId" ng-blur="login()"/>
+          </div>
+      </div>
+    <div class="alert alert-danger" id="alert-panel" style="display:none">
+  	  <button type="button" class="close" onclick="$('#alert-panel').hide();">&times;</button>
+	    <div class="alert-body" id="alert-panel-body"></div>
+    </div>
+		<div class="row">
+			<form onsubmit="return false;">
+			  <div class="input-group">
+				  <input type="text" class="form-control" id=
+							"directory" /> <span class="input-group-btn"><button class="btn btn-default"
+							type="submit" id="btn-nav-directory"><span class="input-group-btn">Go!</span></button></span>
+			  </div>
+		  </form>
+            <div>&nbsp;</div>
+            <div class="well" id="dirMetadata" >
+                <div class="current_directory"></div>
+            </div>
+            <div class="dirCommands" id="dirCommands" >
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#create-directory">Create Directory</button>
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#upload-file">Upload File</button>
+            </div>
+		</div>
+    <br />
+    <div id="panel"></div>
+  </div>
+	<script type="text/x-dust-template" id="tmpl-explorer">
+		<table class="table">
+			<thead>
+				<tr>
+				<th>Permission</th>
+				<th>Owner</th>
+				<th>Group</th>
+				<th>Size</th>
+				<th>Replication</th>
+				<th>Block Size</th>
+				<th>Name</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#FileStatus}
+				<tr>
+				<td>{#helper_to_permission/}{#helper_to_acl_bit/}</td>
+				<td>{owner}</td>
+				<td>{group}</td>
+				<td>{length|fmt_bytes}</td>
+				<td>{replication}</td>
+				<td>{blockSize|fmt_bytes}</td>
+        {@if cond="'{pathSuffix}' == '.'"}
+				<td>{pathSuffix}</td>
+        {:else}
+				<td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links"
+            inode-path="{pathSuffix}">{pathSuffix}</a></td>
+        {/if}
+				</tr>
+				{/FileStatus}
+			</tbody>
+		</table>
+	</script>
+
+	<script type="text/x-dust-template" id="tmpl-block-info">
+		{#block}
+		<p>Block ID: {blockId}</p>
+		<p>Block Pool ID: {blockPoolId}</p>
+		<p>Generation Stamp: {generationStamp}</p>
+		<p>Size: {numBytes}</p>
+		{/block}
+		<p>Availability:
+		<ul>
+			{#locations}
+			<li>{hostName}</li>
+			{/locations}
+		</ul>
+		</p>
+	</script>
+
+	<script type="text/javascript" src="/static/jquery-1.10.2.min.js"></script>
+	<script type="text/javascript" src="/static/bootstrap-3.0.2/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="/static/dust-full-2.0.0.min.js"></script>
+	<script type="text/javascript" src="/static/dust-helpers-1.1.1.min.js"></script>
+	<script type="text/javascript" src="dfs-dust.js"></script>
+	<script type="text/javascript" src="exp2.js"></script>
+  <hr />
+  <p>Hadoop, 2014.</p>
+</body>
+</html>
