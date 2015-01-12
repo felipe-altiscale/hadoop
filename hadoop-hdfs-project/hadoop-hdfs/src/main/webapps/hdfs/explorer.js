@@ -179,5 +179,37 @@
     }
   }
 
+  $('#upload-file').on('show.bs.modal', function(event) {
+    var pwd = window.location.hash.slice(1);
+    if( pwd.slice(-1) != '/' ) {
+      pwd = pwd + '/';
+    }
+
+    var modal = $(this)
+    $('#upload-file-button').on('click', function() {
+      $(this).prop('disabled', true);
+      $(this).button('complete');
+
+      var file = $('#upload-file-input').prop('files')[0];
+
+      var url = '/webhdfs/v1' + pwd + file.name + '?op=CREATE';
+
+      $.ajax({
+        type: 'PUT',
+        url: url,
+        data: file,
+        processData: false,
+        crossDomain: true
+      }).done(function(data) {
+        modal.modal('hide');
+        browse_directory(pwd);
+      }).error(function(xhr, ajaxOptions, thrownError) {
+        alert(xhr.status);
+      });
+
+    });
+  });
+
+
   init();
 })();
