@@ -191,7 +191,6 @@
       $(this).button('complete');
 
       var file = $('#upload-file-input').prop('files')[0];
-
       var url = '/webhdfs/v1' + pwd + file.name + '?op=CREATE';
 
       $.ajax({

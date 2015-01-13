@@ -175,6 +175,8 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     final URI uri = new URI(HDFS_URI_SCHEME, nnId, path, null, null);
     resp.headers().set(LOCATION, uri.toString());
     resp.headers().set(CONTENT_LENGTH, 0);
+    resp.headers().set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
+
     ctx.pipeline().replace(this, HdfsWriter.class.getSimpleName(),
       new HdfsWriter(dfsClient, out, resp));
   }
@@ -252,7 +254,6 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     HttpHeaders headers = response.headers();
     headers.set(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
     headers.set(ACCESS_CONTROL_ALLOW_HEADERS, ACCEPT);
-//    headers.set(ACCESS_CONTROL_ALLOW_HEADERS, CONTENT_TYPE);
     headers.set(ACCESS_CONTROL_ALLOW_METHODS, PUT);
     headers.set(ACCESS_CONTROL_MAX_AGE, 1728000);
     headers.set(CONTENT_LENGTH, 0);
