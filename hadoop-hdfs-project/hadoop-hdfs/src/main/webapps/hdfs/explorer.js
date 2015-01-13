@@ -190,19 +190,24 @@
       $(this).prop('disabled', true);
       $(this).button('complete');
 
-      var file = $('#upload-file-input').prop('files')[0];
-      var url = '/webhdfs/v1' + pwd + file.name + '?op=CREATE';
+      for(var i = 0; i < $('#upload-file-input').prop('files').length; i++) {
+        var file = $('#upload-file-input').prop('files')[i];
+        var url = '/webhdfs/v1' + pwd + file.name + '?op=CREATE';
 
-      $.ajax({
-        type: 'PUT',
-        url: url,
-        data: file,
-        processData: false,
-        crossDomain: true
-      }).done(function(data) {
-        modal.modal('hide');
-        browse_directory(pwd);
-      });
+        $.ajax({
+          type: 'PUT',
+          url: url,
+          data: file,
+          processData: false,
+          crossDomain: true
+        }).done(function(data) {
+          modal.modal('hide');
+          browse_directory(pwd);
+        }).error(function(xhr, textStatus, errorThrown) {
+          alert("TextStatus " + textStatus + " and errorThrown: " + errorThrown
+              + ", Location: " + xhr.getAllResponseHeaders());
+        });
+      }
     });
   });
 
