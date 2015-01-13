@@ -203,10 +203,7 @@
       }).done(function(data) {
         modal.modal('hide');
         browse_directory(pwd);
-      }).error(function(xhr, ajaxOptions, thrownError) {
-        alert(xhr.status);
       });
-
     });
   });
 
