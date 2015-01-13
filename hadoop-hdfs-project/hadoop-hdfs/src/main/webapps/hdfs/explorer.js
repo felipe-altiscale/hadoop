@@ -203,9 +203,6 @@
         }).done(function(data) {
           modal.modal('hide');
           browse_directory(pwd);
-        }).error(function(xhr, textStatus, errorThrown) {
-          alert("TextStatus " + textStatus + " and errorThrown: " + errorThrown
-              + ", Location: " + xhr.getAllResponseHeaders());
         });
       }
     });
