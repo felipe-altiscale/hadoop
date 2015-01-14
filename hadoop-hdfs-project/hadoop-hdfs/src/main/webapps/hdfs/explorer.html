@@ -145,7 +145,7 @@
         <tbody>
           {#FileStatus}
           <tr>
-            <td>{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</td>
+            <td><span class="ghostPencil">{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</span></td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>

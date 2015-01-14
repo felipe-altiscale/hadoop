@@ -213,3 +213,5 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   margin-top:20px;
   display: none;
 }
+
+td:hover .ghostPencil{background:url("/static/images/pencil.png") no-repeat right; padding-right:17px;cursor:pointer;float:left: width: 16px}
