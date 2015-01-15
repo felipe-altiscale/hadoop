@@ -200,7 +200,7 @@
         <tbody>
           {#FileStatus}
           <tr>
-            <td><span inode-type="{type}" class="explorer-perm-links ghostPencil" inode-path="{pathSuffix}" perms="{permission}">{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</span></td>
+            <td><span inode-type="{type}" class="explorer-perm-links ghostPencil" inode-path="{pathSuffix}">{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</span></td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>

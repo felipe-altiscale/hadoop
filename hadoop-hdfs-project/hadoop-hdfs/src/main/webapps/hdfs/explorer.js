@@ -81,73 +81,22 @@
   function view_perm_details(path, abs_path, perms) {
     $('#perm-info-title').text("Permissions information - " + path);
 
-    var sticky = Math.floor( perms / 1000 );
-    var uPerms = Math.floor( perms / 100 );
-    perms = perms - ( uPerms * 100 );
-    var gPerms = Math.floor( perms / 10 );
-    perms = perms - ( gPerms * 10 );
-    var oPerms = perms;
+    var arr = ["#sticky", "#perm-ur", "#perm-uw", "#perm-ux", "#perm-gr", "#perm-gw", "#perm-gx", "#perm-or", "#perm-ow", "#perm-ox"]
 
-    if(sticky == 1) {
+    if(perms.charAt(0) == 't' || perms.charAt(9) == 't') {
       $( '#sticky' ).prop( 'checked', true );
     } else {
       $( '#sticky' ).prop( 'checked', false );
     }
 
-    if( Math.floor( uPerms / 4 ) ) {
-        $( '#perm-ur' ).prop( 'checked', true );
-        uPerms -= 4;
+    for(var i = 1; i < perms.length; i++) {
+      if(perms.charAt(i) != '-') {
+        $( arr[i] ).prop( 'checked', true );
+      } else {
+        $( arr[i] ).prop( 'checked', false );
+      }
+      
     }
-    else
-        $( '#perm-ur' ).prop( 'checked', false );
-    if( Math.floor( uPerms / 2 ) ) {
-        $( '#perm-uw' ).prop( 'checked', true );
-        uPerms -= 2;
-    }
-    else
-        $( '#perm-uw' ).prop( 'checked', false );
-    if( Math.floor( uPerms ) ) {
-        $( '#perm-ux' ).prop( 'checked', true );
-    }
-    else
-        $( '#perm-ux' ).prop( 'checked', false );
-
-
-    if( Math.floor( gPerms / 4 ) ) {
-        $( '#perm-gr' ).prop( 'checked', true );
-        gPerms -= 4;
-    }
-    else
-        $( '#perm-gr' ).prop( 'checked', false );
-    if( Math.floor( gPerms / 2 ) ) {
-        $( '#perm-gw' ).prop( 'checked', true );
-        gPerms -= 2;
-    }
-    else
-        $( '#perm-gw' ).prop( 'checked', false );
-    if( Math.floor( gPerms ) ) {
-        $( '#perm-gx' ).prop( 'checked', true );
-    }
-    else
-        $( '#perm-gx' ).prop( 'checked', false );
-
-    if( Math.floor( oPerms / 4 ) ) {
-        $( '#perm-or' ).prop( 'checked', true );
-        oPerms -= 4;
-    }
-    else
-        $( '#perm-or' ).prop( 'checked', false );
-    if( Math.floor( oPerms / 2 ) ) {
-        $( '#perm-ow' ).prop( 'checked', true );
-        oPerms -= 2;
-    }
-    else
-        $( '#perm-ow' ).prop( 'checked', false );
-    if( Math.floor( oPerms ) ) {
-        $( '#perm-ox' ).prop( 'checked', true );
-    }
-    else
-        $( '#perm-ox' ).prop( 'checked', false );
 
     $('#perm-info').modal();
   }
@@ -236,9 +185,8 @@
         });
 
         $('.explorer-perm-links').click(function() {
-          var type = $(this).attr('inode-type');
           var path = $(this).attr('inode-path');
-          var perms = $(this).attr('perms');
+          var perms = $(this).html();
           var abs_path = append_path(current_directory, path);
           view_perm_details(path, abs_path, perms);
         });
