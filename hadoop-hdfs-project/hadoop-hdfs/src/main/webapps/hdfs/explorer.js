@@ -78,6 +78,11 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
+  function view_perm_details(path, abs_path) {
+    $('#perm-info-title').text("Permissions information - " + path);
+    $('#perm-info').modal();
+  }
+
   function view_file_details(path, abs_path) {
     function show_block_info(blocks) {
       var menus = $('#file-info-blockinfo-list');
@@ -160,6 +165,14 @@
             view_file_details(path, abs_path);
           }
         });
+
+        $('.explorer-perm-links').click(function() {
+          var type = $(this).attr('inode-type');
+          var path = $(this).attr('inode-path');
+          var abs_path = append_path(current_directory, path);
+          view_perm_details(path, abs_path);
+        });
+
       });
     }).error(network_error_handler(url));
   }
