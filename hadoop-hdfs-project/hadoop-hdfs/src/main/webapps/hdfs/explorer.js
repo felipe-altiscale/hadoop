@@ -22,7 +22,9 @@
   // in the preview.
   var TAIL_CHUNK_SIZE = 32768;
 
+  //This stores the current directory which is being browsed
   var current_directory = "";
+  //This stores the absolute file path that has been opened in various modals
   var absolute_file_path = "";
 
   function show_err_msg(msg) {
@@ -135,7 +137,6 @@
     }).error(network_error_handler(url));
   }
 
-  
   function view_file_details(path, abs_path) {
     function show_block_info(blocks) {
       var menus = $('#file-info-blockinfo-list');
@@ -219,6 +220,7 @@
           }
         });
 
+        //Set the handler for changing permissions
         $('.explorer-perm-links').click(function() {
           var path = $(this).attr('inode-path');
           var perms = $(this).html();

@@ -47,59 +47,62 @@
     </div>
     </header>
 
-    <div class="modal" id="perm-info" tabindex="-1" role="dialog" aria-hidden="true">
-      <div class="modal-dialog">
-  <div class="modal-content">
-    <div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-      <h4 class="modal-title" id="perm-info-title">Permissions information</h4>
-    </div>
+  <div class="modal" id="perm-info" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+             aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="perm-info-title">Permissions information
+          </h4>
+        </div>
 
-    <div class="modal-body" id="perm-info-body">
+        <div class="modal-body" id="perm-info-body">
 
-    <div class="panel panel-success" id="file-perm-blockinfo-panel">
-      <div class="panel-heading">Permissions</div>
-      <div class="panel-body" id="file-perm-blockinfo-body">
-        <table>
-          <tr><td>Sticky</td>
-            <td><label class="checkbox-inline" for="sticky">Bit</label>
-              <input type="checkbox" id="sticky"></td>
-          </tr>
-          <tr><td>File Owner may:</td>
-            <td><label class="checkbox-inline" for="perm-ur">Read</label>
-              <input type="checkbox" id="perm-ur"></td>
-            <td><label class="checkbox-inline" for="perm-uw">Write</label>
-              <input type="checkbox" id="perm-uw"></td>
-            <td><label class="checkbox-inline" for="perm-ux">Execute</label>
-              <input type="checkbox" id="perm-ux"></td>
-          </tr>
-          <tr><td>Group Members may:</td>
-            <td><label class="checkbox-inline" for="perm-gr">Read</label>
-              <input type="checkbox" id="perm-gr"></td>
-            <td><label class="checkbox-inline" for="perm-gw">Write</label>
-              <input type="checkbox" id="perm-gw"></td>
-            <td><label class="checkbox-inline" for="perm-gx">Execute</label>
-              <input type="checkbox" id="perm-gx"></td>
-          </tr>
-          <tr><td>Other Users may:</td>
-            <td><label class="checkbox-inline" for="perm-ur">Read</label>
-              <input type="checkbox" id="perm-or"></td>
-            <td><label class="checkbox-inline" for="perm-uw">Write</label>
-              <input type="checkbox" id="perm-ow"></td>
-            <td><label class="checkbox-inline" for="perm-ux">Execute</label>
-              <input type="checkbox" id="perm-ox"></td>
-          </tr>
-        </table>
-        <button type="button" class="btn btn-primary" id="set-perm-button"
-        >Set Permission</button>
+          <div class="panel panel-success" id="file-perm-blockinfo-panel">
+            <div class="panel-heading">Permissions</div>
+            <div class="panel-body" id="file-perm-blockinfo-body">
+              <table>
+                <tr><td>Sticky</td>
+                  <td><label class="checkbox-inline" for="sticky">Bit</label>
+                    <input type="checkbox" id="sticky"></td>
+                </tr>
+                <tr><td>File Owner may:</td>
+                  <td><label class="checkbox-inline" for="perm-ur">Read
+                    </label><input type="checkbox" id="perm-ur"></td>
+                  <td><label class="checkbox-inline" for="perm-uw">Write
+                    </label><input type="checkbox" id="perm-uw"></td>
+                  <td><label class="checkbox-inline" for="perm-ux">Execute
+                    </label><input type="checkbox" id="perm-ux"></td>
+                </tr>
+                <tr><td>Group Members may:</td>
+                  <td><label class="checkbox-inline" for="perm-gr">Read
+                    </label><input type="checkbox" id="perm-gr"></td>
+                  <td><label class="checkbox-inline" for="perm-gw">Write
+                    </label><input type="checkbox" id="perm-gw"></td>
+                  <td><label class="checkbox-inline" for="perm-gx">Execute
+                    </label><input type="checkbox" id="perm-gx"></td>
+                </tr>
+                <tr><td>Other Users may:</td>
+                  <td><label class="checkbox-inline" for="perm-ur">Read
+                    </label><input type="checkbox" id="perm-or"></td>
+                  <td><label class="checkbox-inline" for="perm-uw">Write
+                    </label><input type="checkbox" id="perm-ow"></td>
+                  <td><label class="checkbox-inline" for="perm-ux">Execute
+                    </label><input type="checkbox" id="perm-ox"></td>
+                </tr>
+              </table>
+              <button type="button" class="btn btn-primary" id="set-perm-button"
+              >Set Permission</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer"><button type="button" class="btn btn-success"
+          data-dismiss="modal">Close</button></div>
       </div>
     </div>
-    </div>
-
-    <div class="modal-footer"><button type="button" class="btn btn-success"
-              data-dismiss="modal">Close</button></div>
   </div>
-      </div>
-    </div>
 
     <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
@@ -143,23 +146,24 @@
       </div>
 
 
-        <div class="modal" id="upload-file" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal" id="upload-file" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
-          <div class="modal-content">
-              <div class="modal-header"><button type="button"
-                  class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                  <h4 class="modal-title" id="file-upload-title">Upload File</h4>
-              </div>
-              <div class="modal-body" id="file-upload-body">
-                <input id="upload-file-input" type="file" class="file" multiple=false>
-              </div>
-              <div class="modal-footer">
-                  <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
-                  <button type="button" class="btn btn-success" id="upload-file-button" data-complete-text="Uploading...">Upload</button>
-              </div>
+        <div class="modal-content">
+          <div class="modal-header"><button type="button"
+            class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="file-upload-title">Upload File</h4>
           </div>
+          <div class="modal-body" id="file-upload-body">
+            <input id="upload-file-input" type="file" class="file" multiple=false>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-success" id="upload-file-button"
+              data-complete-text="Uploading...">Upload</button>
+          </div>
+        </div>
       </div>
-  </div>
+    </div>
 
       <div class="row">
 	<form onsubmit="return false;">
@@ -167,10 +171,11 @@
 					  "directory" /> <span class="input-group-btn"><button class="btn btn-default"
 											       type="submit" id="btn-nav-directory"><span class="input-group-btn">Go!</span></button></span></div>
 	</form>
-             <div>&nbsp;</div>
-             <div class="dirCommands" id="dirCommands" >
-                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#upload-file">Upload File</button>
-            </div>
+    <div>&nbsp;</div>
+    <div class="dirCommands" id="dirCommands" >
+      <button type="button" class="btn btn-primary" data-toggle="modal"
+        data-target="#upload-file">Upload File</button>
+    </div>
 
       </div>
       <br />
@@ -199,7 +204,10 @@
         <tbody>
           {#FileStatus}
           <tr>
-            <td><span inode-type="{type}" class="explorer-perm-links ghostPencil" inode-path="{pathSuffix}">{type|helper_to_directory}{permission|helper_to_permission}{aclBit|helper_to_acl_bit}</span></td>
+            <td><span inode-type="{type}" class="explorer-perm-links ghostPencil"
+                  inode-path="{pathSuffix}">{type|helper_to_directory}
+                  {permission|helper_to_permission}{aclBit|helper_to_acl_bit}
+                </span></td>
             <td>{owner}</td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>
