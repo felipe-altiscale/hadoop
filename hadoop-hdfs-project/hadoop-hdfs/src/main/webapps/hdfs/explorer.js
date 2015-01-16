@@ -78,29 +78,55 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
+  /* This method loads the checkboxes on the permission info modal. It accepts
+   * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
+   * checkboxes that should be true and false
+   */
   function view_perm_details(path, abs_path, perms) {
     $('#perm-info-title').text("Permissions information - " + path);
 
-    var arr = ["#sticky", "#perm-ur", "#perm-uw", "#perm-ux", "#perm-gr", "#perm-gw", "#perm-gx", "#perm-or", "#perm-ow", "#perm-ox"]
+    var arr = ["#sticky", "#perm-ur", "#perm-uw", "#perm-ux", "#perm-gr",
+               "#perm-gw", "#perm-gx", "#perm-or", "#perm-ow", "#perm-ox"]
 
-    if(perms.charAt(0) == 't' || perms.charAt(9) == 't') {
-      $( '#sticky' ).prop( 'checked', true );
-    } else {
-      $( '#sticky' ).prop( 'checked', false );
-    }
+    //Sticky bit could be set on first char (dir) or last (file)
+    $( arr[0] ).prop( 'checked',
+      perms.charAt(0) == 't' || perms.charAt(9) == 't' );
 
     for(var i = 1; i < perms.length; i++) {
-      if(perms.charAt(i) != '-') {
-        $( arr[i] ).prop( 'checked', true );
-      } else {
-        $( arr[i] ).prop( 'checked', false );
-      }
-      
+      $( arr[i] ).prop( 'checked', perms.charAt(i) != '-');
     }
 
     $('#perm-info').modal();
   }
 
+  /* Figure out the Octal permissions from the checkboxes
+   */
+  function convertCheckboxesToOctalPermissions() {
+    var octal = "";
+
+    octal += $( '#sticky' ).prop( 'checked' ) ? "1" : "0";
+
+  }
+
+  // Use WebHDFS to set permissions on an absolute path
+  function setPermission(abs_path, permissionMask) {
+    // PUT /webhdfs/v1/<path>?op=SETPERMISSION&permission=<permission>
+    var url = '/webhdfs/v1' + abs_path + '?op=SETPERMISSION'
+        + '&permission=' + permissionMask;
+
+    $.ajax(url,
+      { type: 'PUT',
+        crossDomain: true
+      }).done(function(data) {
+      var d = get_response(data, "FileStatuses");
+      if (d === null) {
+        show_err_msg(get_response_err_msg(data));
+        return;
+      }
+    }).error(network_error_handler(url));
+  }
+
+  
   function view_file_details(path, abs_path) {
     function show_block_info(blocks) {
       var menus = $('#file-info-blockinfo-list');
