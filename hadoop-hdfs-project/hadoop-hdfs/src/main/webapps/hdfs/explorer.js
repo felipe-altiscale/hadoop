@@ -23,6 +23,7 @@
   var TAIL_CHUNK_SIZE = 32768;
 
   var current_directory = "";
+  var absolute_file_path = "";
 
   function show_err_msg(msg) {
     $('#alert-panel-body').html(msg);
@@ -82,7 +83,7 @@
    * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
    * checkboxes that should be true and false
    */
-  function view_perm_details(path, abs_path, perms) {
+  function view_perm_details(path, perms) {
     $('#perm-info-title').text("Permissions information - " + path);
 
     var arr = ["#sticky", "#perm-ur", "#perm-uw", "#perm-ux", "#perm-gr",
@@ -95,34 +96,42 @@
     for(var i = 1; i < perms.length; i++) {
       $( arr[i] ).prop( 'checked', perms.charAt(i) != '-');
     }
-
+    $('#set-perm-button').click(setPermissions);
     $('#perm-info').modal();
   }
 
-  /* Figure out the Octal permissions from the checkboxes
+  /* Figure out the Octal permissions from the checkboxes. This depends on
+   * chmod to assume ommitted digits to be leading zeros.
    */
   function convertCheckboxesToOctalPermissions() {
-    var octal = "";
-
-    octal += $( '#sticky' ).prop( 'checked' ) ? "1" : "0";
-
+    var p = 0
+    p += $( '#sticky' ).prop( 'checked' ) ? 1000 : 0;
+    p += $( '#perm-ur' ).prop( 'checked' ) ? 400 : 0;
+    p += $( '#perm-uw' ).prop( 'checked' ) ? 200 : 0;
+    p += $( '#perm-ux' ).prop( 'checked' ) ? 100 : 0;
+    p += $( '#perm-gr' ).prop( 'checked' ) ? 40 : 0;
+    p += $( '#perm-gw' ).prop( 'checked' ) ? 20 : 0;
+    p += $( '#perm-gx' ).prop( 'checked' ) ? 10 : 0;
+    p += $( '#perm-or' ).prop( 'checked' ) ? 4 : 0;
+    p += $( '#perm-ow' ).prop( 'checked' ) ? 2 : 0;
+    p += $( '#perm-ox' ).prop( 'checked' ) ? 1 : 0;
+    return "" + p;
   }
 
   // Use WebHDFS to set permissions on an absolute path
-  function setPermission(abs_path, permissionMask) {
+  function setPermissions() {
+    var permissionMask = convertCheckboxesToOctalPermissions();
+
     // PUT /webhdfs/v1/<path>?op=SETPERMISSION&permission=<permission>
-    var url = '/webhdfs/v1' + abs_path + '?op=SETPERMISSION'
+    var url = '/webhdfs/v1' + absolute_file_path + '?op=SETPERMISSION'
         + '&permission=' + permissionMask;
 
     $.ajax(url,
       { type: 'PUT',
         crossDomain: true
       }).done(function(data) {
-      var d = get_response(data, "FileStatuses");
-      if (d === null) {
-        show_err_msg(get_response_err_msg(data));
-        return;
-      }
+        $('#perm-info').modal('hide');
+        browse_directory(current_directory);
     }).error(network_error_handler(url));
   }
 
@@ -213,8 +222,8 @@
         $('.explorer-perm-links').click(function() {
           var path = $(this).attr('inode-path');
           var perms = $(this).html();
-          var abs_path = append_path(current_directory, path);
-          view_perm_details(path, abs_path, perms);
+          absolute_file_path = append_path(current_directory, path);
+          view_perm_details(path, perms);
         });
 
       });
