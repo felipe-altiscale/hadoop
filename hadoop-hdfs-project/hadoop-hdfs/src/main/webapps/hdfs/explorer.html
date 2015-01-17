@@ -203,17 +203,18 @@
         </thead>
         <tbody>
           {#FileStatus}
-          <tr>
-            <td><span inode-type="{type}" class="explorer-perm-links ghostPencil"
-                  inode-path="{pathSuffix}">{type|helper_to_directory}
-                  {permission|helper_to_permission}{aclBit|helper_to_acl_bit}
+          <tr inode-name="{pathSuffix}">
+            <td><span class="explorer-perm-links ghostPencil">
+                  {type|helper_to_directory}{permission|helper_to_permission}
+                  {aclBit|helper_to_acl_bit}
                 </span></td>
-            <td>{owner}</td>
+            <td><span class="explorer-owner-links ghostPencil">{owner}
+                </span></td>
             <td>{group}</td>
             <td>{length|fmt_bytes}</td>
             <td>{replication}</td>
             <td>{blockSize|fmt_bytes}</td>
-            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links" inode-path="{pathSuffix}">{pathSuffix}</a></td>
+            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
           </tr>
           {/FileStatus}
         </tbody>

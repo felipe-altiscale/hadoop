@@ -26,6 +26,8 @@
   var current_directory = "";
   //This stores the absolute file path that has been opened in various modals
   var absolute_file_path = "";
+  //This stores the file / directory name that has been opened in various modals
+  var inode_name = "";
 
   function show_err_msg(msg) {
     $('#alert-panel-body').html(msg);
@@ -85,8 +87,8 @@
    * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
    * checkboxes that should be true and false
    */
-  function view_perm_details(path, perms) {
-    $('#perm-info-title').text("Permissions information - " + path);
+  function view_perm_details(perms) {
+    $('#perm-info-title').text("Permissions information - " + inode_name);
 
     var arr = ["#sticky", "#perm-ur", "#perm-uw", "#perm-ux", "#perm-gr",
                "#perm-gw", "#perm-gx", "#perm-or", "#perm-ow", "#perm-ox"]
@@ -211,7 +213,7 @@
 
         $('.explorer-browse-links').click(function() {
           var type = $(this).attr('inode-type');
-          var path = $(this).attr('inode-path');
+          var path = $(this).closest('tr').attr('inode-name');
           var abs_path = append_path(current_directory, path);
           if (type == 'DIRECTORY') {
             browse_directory(abs_path);
@@ -222,10 +224,10 @@
 
         //Set the handler for changing permissions
         $('.explorer-perm-links').click(function() {
-          var path = $(this).attr('inode-path');
+          inode_name = $(this).closest('tr').attr('inode-name');
+          absolute_file_path = append_path(current_directory, inode_name);
           var perms = $(this).html();
-          absolute_file_path = append_path(current_directory, path);
-          view_perm_details(path, perms);
+          view_perm_details(perms);
         });
 
       });
