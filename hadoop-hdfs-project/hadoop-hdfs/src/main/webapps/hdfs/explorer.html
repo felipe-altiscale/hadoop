@@ -104,6 +104,41 @@
     </div>
   </div>
 
+  <div class="modal" id="owner-info" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+             aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="owner-info-title">Owner and group information
+          </h4>
+        </div>
+
+        <div class="modal-body" id="owner-info-body">
+
+          <div class="panel panel-success" id="file-owner-blockinfo-panel">
+            <div class="panel-heading">Owner:Group</div>
+            <div class="panel-body" id="file-owner-blockinfo-body">
+              <table>
+                <tr><td>Owner</td>
+                  <td><input type="text" id="owner-owner"></td>
+                </tr>
+                <tr><td>Group</td>
+                  <td><input type="text" id="owner-group"></td>
+                </tr>
+              </table>
+              <button type="button" class="btn btn-primary" id="set-owner-button"
+              >Set Owner/Group</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer"><button type="button" class="btn btn-success"
+          data-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
     <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
 	<div class="modal-content">
@@ -203,14 +238,15 @@
         </thead>
         <tbody>
           {#FileStatus}
-          <tr inode-name="{pathSuffix}">
+          <tr inode-name="{pathSuffix}" inode-owner={owner} inode-group={group}>
             <td><span class="explorer-perm-links ghostPencil">
                   {type|helper_to_directory}{permission|helper_to_permission}
                   {aclBit|helper_to_acl_bit}
                 </span></td>
             <td><span class="explorer-owner-links ghostPencil">{owner}
                 </span></td>
-            <td>{group}</td>
+            <td><span class="explorer-owner-links ghostPencil">{group}
+                </span></td>
             <td>{length|fmt_bytes}</td>
             <td>{replication}</td>
             <td>{blockSize|fmt_bytes}</td>

@@ -87,6 +87,34 @@
    * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
    * checkboxes that should be true and false
    */
+  function view_owner_details(owner, group) {
+    $('#owner-info-title').text("Owner and group information - " + inode_name);
+
+    $('#owner-owner').val(owner);
+    $('#owner-group').val(group);
+    $('#set-owner-button').click(setOwnerGroup);
+    $('#owner-info').modal();
+  }
+
+  // Use WebHDFS to set owner and group on an absolute path
+  function setOwnerGroup() {
+    var url = '/webhdfs/v1' + absolute_file_path + '?op=SETOWNER'
+    + '&owner=' + $('#owner-owner').val() + '&group=' + $('#owner-group').val();
+
+    $.ajax(url,
+      { type: 'PUT',
+        crossDomain: true
+      }).done(function(data) {
+        $('#owner-info').modal('hide');
+        browse_directory(current_directory);
+    }).error(network_error_handler(url));
+
+  }
+
+  /* This method loads the checkboxes on the permission info modal. It accepts
+   * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
+   * checkboxes that should be true and false
+   */
   function view_perm_details(perms) {
     $('#perm-info-title').text("Permissions information - " + inode_name);
 
@@ -230,6 +258,15 @@
           view_perm_details(perms);
         });
 
+        //Set the handler for changing owner/group
+        $('.explorer-owner-links').click(function() {
+          inode_name = $(this).closest('tr').attr('inode-name');
+          absolute_file_path = append_path(current_directory, inode_name);
+          var owner = $(this).closest('tr').attr('inode-owner');
+          var group = $(this).closest('tr').attr('inode-group');
+          view_owner_details(owner, group);
+        });
+
       });
     }).error(network_error_handler(url));
   }
@@ -273,7 +310,7 @@
         }).done(function(data) {
           modal.modal('hide');
           browse_directory(pwd);
-        });
+        }).error(network_error_handler(url));
       }
     });
   });
