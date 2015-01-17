@@ -315,5 +315,25 @@
   });
 
 
+  $('#create-directory').on('show.bs.modal', function(event) {
+    var modal = $(this)
+    $('#new_directory_pwd').html(current_directory);
+    $('#create-directory-button').on('click', function () {
+      $(this).prop('disabled', true);
+      $(this).button('complete');
+
+      var url = '/webhdfs/v1' + append_path(current_directory,
+        $('#new_directory').val()) + '?op=MKDIRS';
+
+      $.ajax(url,
+        { type: 'PUT',
+          crossDomain: true
+        }).done(function(data) {
+          browse_directory(current_directory);
+      }).error(network_error_handler(url));
+      $('#create-directory').modal('hide');
+    })
+  });
+
   init();
 })();
