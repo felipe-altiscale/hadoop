@@ -83,10 +83,33 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
-  /* This method loads the checkboxes on the permission info modal. It accepts
-   * the string representation, eg. '-rwxr-xr-t' or 'drwxrwx---' and infers the
-   * checkboxes that should be true and false
-   */
+  /* This method displays the modal to change replication count */
+  function view_replication_details(repl) {
+    $('#owner-info-title').text("Replication information - " + inode_name);
+
+    $('#replication-count').val(repl);
+    $('#set-replication-button').click(setReplication);
+    $('#replication-info').modal();
+  }
+
+  /* This method uses WebHDFS to set the replication of a file */
+  function setReplication() {
+    var url = '/webhdfs/v1' + absolute_file_path + '?op=SETREPLICATION'
+    + '&replication=' + $('#replication-count').val();
+
+    $.ajax(url,
+      { type: 'PUT',
+        crossDomain: true
+      }).done(function(data) {
+        browse_directory(current_directory);
+    }).error(network_error_handler(url)
+     ).complete(function() {
+       $('#replication-info').modal('hide');
+       $('#set-replication-button').button('reset');
+     });
+  }
+
+  /* This method displays the modal to change owner and group */
   function view_owner_details(owner, group) {
     $('#owner-info-title').text("Owner and group information - " + inode_name);
 
@@ -271,6 +294,15 @@
           var group = $(this).closest('tr').attr('inode-group');
           view_owner_details(owner, group);
         });
+
+        //Set the handler for changing replication
+        $('.explorer-replication-links').click(function() {
+          inode_name = $(this).closest('tr').attr('inode-name');
+          absolute_file_path = append_path(current_directory, inode_name);
+          var repl = $(this).closest('tr').attr('inode-replication');
+          view_replication_details(repl);
+        });
+
 
       });
     }).error(network_error_handler(url));

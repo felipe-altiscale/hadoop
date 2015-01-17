@@ -59,9 +59,9 @@
 
         <div class="modal-body" id="perm-info-body">
 
-          <div class="panel panel-success" id="file-perm-blockinfo-panel">
+          <div class="panel panel-success" id="file-perm-panel">
             <div class="panel-heading">Permissions</div>
-            <div class="panel-body" id="file-perm-blockinfo-body">
+            <div class="panel-body" id="file-perm-body">
               <table>
                 <tr><td>Sticky</td>
                   <td><label class="checkbox-inline" for="sticky">Bit</label>
@@ -116,9 +116,9 @@
 
         <div class="modal-body" id="owner-info-body">
 
-          <div class="panel panel-success" id="file-owner-blockinfo-panel">
+          <div class="panel panel-success" id="file-owner-panel">
             <div class="panel-heading">Owner:Group</div>
-            <div class="panel-body" id="file-owner-blockinfo-body">
+            <div class="panel-body" id="file-owner-body">
               <table>
                 <tr><td>Owner</td>
                   <td><input type="text" id="owner-owner"></td>
@@ -138,6 +138,39 @@
       </div>
     </div>
   </div>
+
+  <div class="modal" id="replication-info" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+             aria-hidden="true">&times;</button>
+          <h4 class="modal-title" id="replication-info-title">Replication information
+          </h4>
+        </div>
+
+        <div class="modal-body" id="replication-info-body">
+
+          <div class="panel panel-success" id="file-replication-panel">
+            <div class="panel-heading">Replication</div>
+            <div class="panel-body" id="file-replication-body">
+              <table>
+                <tr><td>Replication</td>
+                  <td><input type="text" id="replication-count"></td>
+                </tr>
+              </table>
+              <button type="button" class="btn btn-primary" id="set-replication-button"
+              data-complete-text="Setting Replication...">Set Replication</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer"><button type="button" class="btn btn-success"
+          data-dismiss="modal">Close</button></div>
+      </div>
+    </div>
+  </div>
+
 
     <div class="modal" id="file-info" tabindex="-1" role="dialog" aria-hidden="true">
       <div class="modal-dialog">
@@ -270,7 +303,8 @@
         </thead>
         <tbody>
           {#FileStatus}
-          <tr inode-name="{pathSuffix}" inode-owner={owner} inode-group={group}>
+          <tr inode-name="{pathSuffix}" inode-owner="{owner}" inode-group="{group}"
+            inode-replication="{replication}">
             <td><span class="explorer-perm-links ghostPencil">
                   {type|helper_to_directory}{permission|helper_to_permission}
                   {aclBit|helper_to_acl_bit}
@@ -280,7 +314,8 @@
             <td><span class="explorer-owner-links ghostPencil">{group}
                 </span></td>
             <td>{length|fmt_bytes}</td>
-            <td>{replication}</td>
+            <td><span class="explorer-replication-links ghostPencil">{replication}
+                </span></td>
             <td>{blockSize|fmt_bytes}</td>
             <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
           </tr>
