@@ -106,8 +106,11 @@
         crossDomain: true
       }).done(function(data) {
         browse_directory(current_directory);
-    }).error(network_error_handler(url));
-    $('#owner-info').modal('hide');
+    }).error(network_error_handler(url)
+     ).complete(function() {
+       $('#owner-info').modal('hide');
+       $('#set-owner-button').button('reset');
+     });
   }
 
   /* This method loads the checkboxes on the permission info modal. It accepts
@@ -162,8 +165,11 @@
         crossDomain: true
       }).done(function(data) {
         browse_directory(current_directory);
-    }).error(network_error_handler(url));
-    $('#perm-info').modal('hide');
+    }).error(network_error_handler(url)
+     ).complete(function() {
+      $('#perm-info').modal('hide');
+      $('#set-perm-button').button('reset');
+    });
   }
 
   function view_file_details(path, abs_path) {
@@ -309,8 +315,10 @@
         }).done(function(data) {
           browse_directory(pwd);
         }).error(network_error_handler(url));
+        //TODO : Think about what happens when 1 / more files fail (modal gets hidden anyway)
       }
       modal.modal('hide');
+      $('#upload-file-button').button('reset');
     });
   });
 
@@ -330,8 +338,11 @@
           crossDomain: true
         }).done(function(data) {
           browse_directory(current_directory);
-      }).error(network_error_handler(url));
-      $('#create-directory').modal('hide');
+      }).error(network_error_handler(url)
+       ).complete(function() {
+         $('#create-directory').modal('hide');
+         $('#create-directory-button').button('reset');
+       });
     })
   });
 
