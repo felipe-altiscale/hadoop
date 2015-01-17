@@ -105,10 +105,9 @@
       { type: 'PUT',
         crossDomain: true
       }).done(function(data) {
-        $('#owner-info').modal('hide');
         browse_directory(current_directory);
     }).error(network_error_handler(url));
-
+    $('#owner-info').modal('hide');
   }
 
   /* This method loads the checkboxes on the permission info modal. It accepts
@@ -162,9 +161,9 @@
       { type: 'PUT',
         crossDomain: true
       }).done(function(data) {
-        $('#perm-info').modal('hide');
         browse_directory(current_directory);
     }).error(network_error_handler(url));
+    $('#perm-info').modal('hide');
   }
 
   function view_file_details(path, abs_path) {
@@ -308,10 +307,10 @@
           processData: false,
           crossDomain: true
         }).done(function(data) {
-          modal.modal('hide');
           browse_directory(pwd);
         }).error(network_error_handler(url));
       }
+      modal.modal('hide');
     });
   });
 
