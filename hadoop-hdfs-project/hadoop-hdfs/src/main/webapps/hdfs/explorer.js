@@ -109,30 +109,19 @@
      });
   }
 
-  /* This method displays the modal to change owner and group */
-  function view_owner_details(owner, group) {
-    $('#owner-info-title').text("Owner and group information - " + inode_name);
-
-    $('#owner-owner').val(owner);
-    $('#owner-group').val(group);
-    $('#set-owner-button').click(setOwnerGroup);
-    $('#owner-info').modal();
-  }
-
   // Use WebHDFS to set owner and group on an absolute path
-  function setOwnerGroup() {
+  function setOwnerGroup(owner, group) {
     var url = '/webhdfs/v1' + absolute_file_path + '?op=SETOWNER'
-    + '&owner=' + $('#owner-owner').val() + '&group=' + $('#owner-group').val();
+    + '&owner=' + owner + '&group=' + group;
 
     $.ajax(url,
       { type: 'PUT',
         crossDomain: true
-      }).done(function(data) {
-        browse_directory(current_directory);
-    }).error(network_error_handler(url)
+      }).error(network_error_handler(url)
      ).complete(function() {
        $('#owner-info').modal('hide');
        $('#set-owner-button').button('reset');
+       browse_directory(current_directory);
      });
   }
 
@@ -287,12 +276,27 @@
         });
 
         //Set the handler for changing owner/group
-        $('.explorer-owner-links').click(function() {
-          inode_name = $(this).closest('tr').attr('inode-name');
-          absolute_file_path = append_path(current_directory, inode_name);
-          var owner = $(this).closest('tr').attr('inode-owner');
-          var group = $(this).closest('tr').attr('inode-group');
-          view_owner_details(owner, group);
+        $('.explorer-owner-links').blur(function() {
+          var ownerOld = $(this).closest('tr').attr('inode-owner');
+          var groupOld = $(this).closest('tr').attr('inode-group');
+          var ownerNew = $(this).hasClass('owner')
+                         ? $(this).html().trim() : ownerOld;
+          var groupNew = $(this).hasClass('group')
+                         ? $(this).html().trim() : groupOld;
+
+          if( ownerOld != ownerNew || groupOld != groupNew) {
+            //The owner/group was changed
+            inode_name = $(this).closest('tr').attr('inode-name');
+            absolute_file_path = append_path(current_directory, inode_name);
+            setOwnerGroup(ownerNew, groupNew);
+          }
+        });
+        //Disable line breaks in owner / group fields
+        $('.explorer-owner-links').keypress(function(e){
+          if(e.which == 13) {
+            $('.explorer-owner-links').removeClass('editing');
+            $('.explorer-owner-links').blur();
+          }
         });
 
         //Set the handler for changing replication
