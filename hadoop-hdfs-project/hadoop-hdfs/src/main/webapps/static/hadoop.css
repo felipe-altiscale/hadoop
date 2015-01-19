@@ -225,3 +225,8 @@ td:hover .ghostPencil {
   -webkit-transition:.5s;
   transition:.5s;
 }
+
+td.perms {
+  padding: 0px 20px;
+  text-align: center;
+}

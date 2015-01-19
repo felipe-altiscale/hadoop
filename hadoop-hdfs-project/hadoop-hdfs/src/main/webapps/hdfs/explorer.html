@@ -58,48 +58,38 @@
         </div>
 
         <div class="modal-body" id="perm-info-body">
-
-          <div class="panel panel-success" id="file-perm-panel">
-            <div class="panel-heading">Permissions</div>
-            <div class="panel-body" id="file-perm-body">
-              <table>
-                <tr><td>Sticky</td>
-                  <td><label class="checkbox-inline" for="sticky">Bit</label>
-                    <input type="checkbox" id="sticky"></td>
-                </tr>
-                <tr><td>File Owner may:</td>
-                  <td><label class="checkbox-inline" for="perm-ur">Read
-                    </label><input type="checkbox" id="perm-ur"></td>
-                  <td><label class="checkbox-inline" for="perm-uw">Write
-                    </label><input type="checkbox" id="perm-uw"></td>
-                  <td><label class="checkbox-inline" for="perm-ux">Execute
-                    </label><input type="checkbox" id="perm-ux"></td>
-                </tr>
-                <tr><td>Group Members may:</td>
-                  <td><label class="checkbox-inline" for="perm-gr">Read
-                    </label><input type="checkbox" id="perm-gr"></td>
-                  <td><label class="checkbox-inline" for="perm-gw">Write
-                    </label><input type="checkbox" id="perm-gw"></td>
-                  <td><label class="checkbox-inline" for="perm-gx">Execute
-                    </label><input type="checkbox" id="perm-gx"></td>
-                </tr>
-                <tr><td>Other Users may:</td>
-                  <td><label class="checkbox-inline" for="perm-ur">Read
-                    </label><input type="checkbox" id="perm-or"></td>
-                  <td><label class="checkbox-inline" for="perm-uw">Write
-                    </label><input type="checkbox" id="perm-ow"></td>
-                  <td><label class="checkbox-inline" for="perm-ux">Execute
-                    </label><input type="checkbox" id="perm-ox"></td>
-                </tr>
-              </table>
-              <button type="button" class="btn btn-primary" id="set-perm-button"
-              data-complete-text="Setting Permission...">Set Permission</button>
-            </div>
+          <div class="panel-body" id="file-perm-body">
+            <table>
+              <tr>
+                <td></td><th>Read</th><th>Write</th><th>Execute</th>
+              </tr>
+              <tr><th>File Owner:</th>
+                <td class="perms"><input type="checkbox" id="perm-ur"></td>
+                <td class="perms"><input type="checkbox" id="perm-uw"></td>
+                <td class="perms"><input type="checkbox" id="perm-ux"></td>
+              </tr>
+              <tr><th>Group Members:</th>
+                <td class="perms"><input type="checkbox" id="perm-gr"></td>
+                <td class="perms"><input type="checkbox" id="perm-gw"></td>
+                <td class="perms"><input type="checkbox" id="perm-gx"></td>
+              </tr>
+              <tr><th>Other Users:</th>
+                <td class="perms"><input type="checkbox" id="perm-or"></td>
+                <td class="perms"><input type="checkbox" id="perm-ow"></td>
+                <td class="perms"><input type="checkbox" id="perm-ox"></td>
+              </tr>
+              <tr><th>Sticky Bit:</th>
+                <td class="perms" colspan="3"><input type="checkbox" id="sticky"></td>
+              </tr>
+            </table>
           </div>
         </div>
 
         <div class="modal-footer"><button type="button" class="btn btn-success"
-          data-dismiss="modal">Close</button></div>
+          data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="set-perm-button"
+            data-complete-text="Setting Permission...">Set Permission</button>
+        </div>
       </div>
     </div>
   </div>
