@@ -31,7 +31,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,14 +41,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -61,7 +59,7 @@ import static org.mockito.Mockito.when;
  * <li>Install docker, and Compile the code with docker-service-url set to the host and port
  * where docker service is running.
  * <br><pre><code>
- * > mvn clean install -Ddocker-service-url=tcp://0.0.0.0:4243
+ * > mvn clean install -Ddocker-exec=/usr/bin/docker -H tcp://0.0.0.0:4243
  *                          -DskipTests
  * </code></pre>
  */
@@ -77,7 +75,6 @@ public class TestDockerContainerExecutor {
 
   private int id = 0;
   private String appSubmitter;
-  private String dockerUrl;
   private String testImage = "centos";
   private String dockerExec;
   private String containerIdStr;
@@ -106,13 +103,11 @@ public class TestDockerContainerExecutor {
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
     conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
 
-    dockerUrl = System.getProperty("docker-service-url");
-    LOG.info("dockerUrl: " + dockerUrl);
-    if (Strings.isNullOrEmpty(dockerUrl)) {
+    dockerExec = System.getProperty("docker-exec");
+    LOG.info("dockerExec: " + dockerExec);
+    if (Strings.isNullOrEmpty(dockerExec)) {
       return;
     }
-    dockerUrl = " -H " + dockerUrl;
-    dockerExec = "docker " + dockerUrl;
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME, dockerExec);
     exec = new DockerContainerExecutor();
@@ -146,6 +141,7 @@ public class TestDockerContainerExecutor {
   }
 
   private int runAndBlock(ContainerId cId, Map<String, String> launchCtxEnv, String... cmd) throws IOException {
+    exec.init();
     String appId = "APP_" + System.currentTimeMillis();
     Container container = mock(Container.class);
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
@@ -172,8 +168,17 @@ public class TestDockerContainerExecutor {
     File f = File.createTempFile("TestDockerContainerExecutor", ".sh");
     f.deleteOnExit();
     PrintWriter p = new PrintWriter(new FileOutputStream(f));
+    Set<String> exclusionSet = new HashSet<String>();
+    exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+    exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
     for(Map.Entry<String, String> entry: launchCtxEnv.entrySet()) {
-      p.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
+      if (!exclusionSet.contains(entry.getKey())) {
+        p.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
+      }
     }
     for (String part : cmd) {
       p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
@@ -207,7 +212,13 @@ public class TestDockerContainerExecutor {
     ContainerId cId = getNextContainerId();
     int ret = runAndBlock(
         cId, env, "touch", touchFile.getAbsolutePath(), "&&", "cp", touchFile.getAbsolutePath(), "/");
-
+    Path workDir = new Path(workSpace.getAbsolutePath());
+    Path pidFile = new Path(workDir, "pid.txt");
+    LineNumberReader lnr = new LineNumberReader(new FileReader(pidFile.toString()));
     assertEquals(0, ret);
+    while(lnr.ready()) {
+      String line = lnr.readLine();
+      assertTrue("Not a valid pid in " + pidFile + " pid: " + line,line.matches("[1-9]\\d*"));
+    }
   }
 }

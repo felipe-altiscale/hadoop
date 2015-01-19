@@ -22,10 +22,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-
+import com.google.common.eventbus.EventBus;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -51,16 +52,17 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
-import java.net.InetSocketAddress;
+
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
@@ -68,29 +70,32 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
  * This executor will launch a docker container and run the task inside the container.
  */
 public class DockerContainerExecutor extends ContainerExecutor {
-
+  private static final String LINE_SEPARATOR =
+        System.getProperty("line.separator");
   private static final Log LOG = LogFactory
       .getLog(DockerContainerExecutor.class);
   public static final String DOCKER_CONTAINER_EXECUTOR_SCRIPT = "docker_container_executor";
-  public static final String DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT = "docker_container_executor_session";
-
+  public static final String DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT_CREATE = "docker_container_executor_session_create";
+  public static final String DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT_START = "docker_container_executor_session_start";
   // This validates that the image is a proper docker image and would not crash docker.
   public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
 
 
   private final FileContext lfs;
   private final Pattern dockerImagePattern;
+private EventBus eventBus;
 
-  public DockerContainerExecutor() {
+public DockerContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
       this.dockerImagePattern = Pattern.compile(DOCKER_IMAGE_PATTERN);
+      this.eventBus = new EventBus();
     } catch (UnsupportedFileSystemException e) {
       throw new RuntimeException(e);
     }
   }
 
-  protected void copyFile(Path src, Path dst, String owner) throws IOException {
+  private void copyFile(Path src, Path dst, String owner) throws IOException {
     lfs.util().copy(src, dst);
   }
 
@@ -102,10 +107,18 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
       YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
-    if (!new File(dockerExecutor).exists()) {
+    String[] arr = dockerExecutor.split("\\s");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("dockerExecutor: " + dockerExecutor);
+    }
+    if (!new File(arr[0]).exists()) {
       throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
     }
-  }
+
+    DockerEventBroadcastService dockerEventBroadcastService = new DockerEventBroadcastService(dockerExecutor, eventBus);
+    dockerEventBroadcastService.init(getConf());
+    dockerEventBroadcastService.start();
+ }
 
   @Override
   public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
@@ -140,7 +153,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
 
   @Override
-  public int launchContainer(Container container,
+  public int launchContainer(final Container container,
                              Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
                              String userName, String appId, Path containerWorkDir,
                              List<String> localDirs, List<String> logDirs) throws IOException {
@@ -197,60 +210,81 @@ public class DockerContainerExecutor extends ContainerExecutor {
     String logDirMount = toMount(logDirs);
     String containerWorkDirMount = toMount(Collections.singletonList(containerWorkDir.toUri().getPath()));
     StringBuilder commands = new StringBuilder();
+    Path pidFile = getPidFilePath(containerId);
     String commandStr = commands.append(dockerExecutor)
         .append(" ")
-        .append("run")
+        .append("create")
         .append(" ")
-        .append("--rm --net=host")
+        .append("--net=host")
         .append(" ")
-        .append(" --name " + containerIdStr)
+        .append("--name " + containerIdStr)
         .append(localDirMount)
         .append(logDirMount)
         .append(containerWorkDirMount)
         .append(" ")
         .append(containerImageName)
+        .append(" ")
+        .append("bash ")
+        .append(launchDst.toUri().getPath().toString())
         .toString();
-    String dockerPidScript = "`" + dockerExecutor + " inspect --format {{.State.Pid}} " + containerIdStr + "`";
-    // Create new local launch wrapper script
-    LocalWrapperScriptBuilder sb =
-      new UnixLocalWrapperScriptBuilder(containerWorkDir, commandStr, dockerPidScript);
-    Path pidFile = getPidFilePath(containerId);
-    if (pidFile != null) {
-      sb.writeLocalWrapperScript(launchDst, pidFile);
-    } else {
-      LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
-      return ExitCode.TERMINATED.getExitCode();
-    }
-    
-    ShellCommandExecutor shExec = null;
-    try {
-      lfs.setPermission(launchDst,
-          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-      lfs.setPermission(sb.getWrapperScriptPath(),
-          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
-      // Setup command to run
-      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
-        containerIdStr, userName, pidFile, this.getConf());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("launchContainer: " + commandStr + " " + Joiner.on(" ").join(command));
-      }
-      shExec = new ShellCommandExecutor(
-          command,
-          new File(containerWorkDir.toUri().getPath()),
-          container.getLaunchContext().getEnvironment());      // sanitized env
-      if (isContainerActive(containerId)) {
-        shExec.execute();
-      } else {
-        LOG.info("Container " + containerIdStr +
-            " was marked as inactive. Returning terminated error");
+    String dockerRmScript = dockerExecutor + " rm " + containerIdStr;
+
+    // Create new local launch wrapper script
+    ShellCommandExecutor shExec = null;
+    ExecutorService executorService = null;
+    try {
+      LocalScriptExecutor localScriptExecutor = new LocalScriptExecutorBuilder()
+              .setContainer(container)
+              .setUserName(userName)
+              .setContainerWorkDir(containerWorkDir)
+              .setContainerId(containerId)
+              .setContainerIdStr(containerIdStr)
+              .setLaunchDst(launchDst)
+              .setPidFile(pidFile)
+              .setCommandStr(commandStr)
+              .setConf(getConf())
+              .setSessionScript(DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT_CREATE)
+              .createLocalScriptExecutor()
+              .invoke();
+      if (localScriptExecutor.is()) {
         return ExitCode.TERMINATED.getExitCode();
       }
+
+      shExec = localScriptExecutor.getShExec();
+      String cid = shExec.getOutput();
+      if (cid.length() > 1) {
+        cid = cid.substring(0, cid.length() - 1);
+      }
+      DockerEventSubscriber subscriber = new DockerEventSubscriber(dockerExecutor, pidFile, cid);
+      eventBus.register(subscriber);
+      //now run the job
+      commandStr = dockerExecutor + " start -a " + containerIdStr;
+      localScriptExecutor = new LocalScriptExecutorBuilder()
+              .setContainer(container)
+              .setUserName(userName)
+              .setContainerWorkDir(containerWorkDir)
+              .setContainerId(containerId)
+              .setContainerIdStr(containerIdStr)
+              .setLaunchDst(launchDst)
+              .setPidFile(pidFile)
+              .setCommandStr(commandStr)
+              .setConf(getConf())
+              .setSessionScript(DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT_START)
+              .setDockerRmCmd(dockerRmScript)
+              .createLocalScriptExecutor()
+              .invoke();
+      if (localScriptExecutor.is()) {
+        return ExitCode.TERMINATED.getExitCode();
+      }
+      shExec = localScriptExecutor.getShExec();
+
     } catch (IOException e) {
+      LOG.debug("exception, ", e);
       if (null == shExec) {
         return -1;
       }
+
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
       // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
@@ -274,11 +308,15 @@ public class DockerContainerExecutor extends ContainerExecutor {
       if (shExec != null) {
         shExec.close();
       }
+      if (executorService != null) {
+        executorService.shutdown();
+      }
     }
     return 0;
   }
 
-  @Override
+
+@Override
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
     ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
 
@@ -327,7 +365,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
       }
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Script: " + baos.toString("UTF-8"));
+      LOG.debug("Launch Script: " + baos.toString("UTF-8"));
     }
   }
 
@@ -389,7 +427,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * @param signal signal to send
    * (for logging).
    */
-  protected void killContainer(String pid, Signal signal) throws IOException {
+  private void killContainer(String pid, Signal signal) throws IOException {
     new ShellCommandExecutor(Shell.getSignalKillCommand(signal.getValue(), pid))
       .execute();
   }
@@ -461,25 +499,53 @@ public class DockerContainerExecutor extends ContainerExecutor {
       extends LocalWrapperScriptBuilder {
     private final Path sessionScriptPath;
     private final String dockerCommand;
-    private final String dockerPidScript;
-
-    public UnixLocalWrapperScriptBuilder(Path containerWorkDir, String dockerCommand, String dockerPidScript) {
+    private final String dockerRmCmd;
+    public UnixLocalWrapperScriptBuilder(Path containerWorkDir, String dockerCommand, String sessionScript, String dockerRmCmd) {
       super(containerWorkDir);
       this.dockerCommand = dockerCommand;
-      this.dockerPidScript = dockerPidScript;
       this.sessionScriptPath = new Path(containerWorkDir,
-        Shell.appendScriptExtension(DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT));
+        Shell.appendScriptExtension(sessionScript));
+      this.dockerRmCmd = dockerRmCmd;
     }
 
     @Override
     public void writeLocalWrapperScript(Path launchDst, Path pidFile)
       throws IOException {
-      writeSessionScript(launchDst, pidFile);
+      DataOutputStream out = null;
+      PrintStream pout = null;
+      PrintStream ps = null;
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      if (LOG.isDebugEnabled()) {
+        ps = new PrintStream(baos, false, "UTF-8");
+      }
+      try {
+        out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
+        pout = new PrintStream(out, false, "UTF-8");
+        pout.println("#!/usr/bin/env bash");
+        pout.println();
+        pout.println(dockerCommand);
+        pout.println();
+        if (!Strings.isNullOrEmpty(dockerRmCmd)) {
+          pout.println(dockerRmCmd);
+          pout.println();
+        }
+        if (LOG.isDebugEnabled()) {
+          ps.println("#!/usr/bin/env bash");
+          ps.println();
+          ps.println(dockerCommand);
+          ps.println();
+          LOG.debug("Session Script: " + baos.toString("UTF-8"));
+        }
+      } finally {
+        IOUtils.cleanup(LOG, pout, out);
+      }
+      lfs.setPermission(sessionScriptPath,
+        ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
       super.writeLocalWrapperScript(launchDst, pidFile);
     }
 
     @Override
-    public void writeLocalWrapperScript(Path launchDst, Path pidFile,
+    protected void writeLocalWrapperScript(Path launchDst, Path pidFile,
                                         PrintStream pout) {
 
       String exitCodeFile = ContainerLaunch.getExitCodeFile(
@@ -493,31 +559,9 @@ public class DockerContainerExecutor extends ContainerExecutor {
       pout.println("exit $rc");
     }
 
-    private void writeSessionScript(Path launchDst, Path pidFile)
-      throws IOException {
-      DataOutputStream out = null;
-      PrintStream pout = null;
-      try {
-        out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
-        pout = new PrintStream(out, false, "UTF-8");
-        // We need to do a move as writing to a file is not atomic
-        // Process reading a file being written to may get garbled data
-        // hence write pid to tmp file first followed by a mv
-        pout.println("#!/usr/bin/env bash");
-        pout.println();
-        pout.println("echo "+ dockerPidScript +" > " + pidFile.toString() + ".tmp");
-        pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-        pout.println(dockerCommand + " bash \"" +
-          launchDst.toUri().getPath().toString() + "\"");
-      } finally {
-        IOUtils.cleanup(LOG, pout, out);
-      }
-      lfs.setPermission(sessionScriptPath,
-        ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-    }
   }
 
-  protected void createDir(Path dirPath, FsPermission perms,
+  private void createDir(Path dirPath, FsPermission perms,
                            boolean createParent, String user) throws IOException {
     lfs.mkdir(dirPath, perms, createParent);
     if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
@@ -706,7 +750,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         ContainerLocalizer.FILECACHE);
   }
 
-  protected Path getWorkingDir(List<String> localDirs, String user,
+  private Path getWorkingDir(List<String> localDirs, String user,
                                String appId) throws IOException {
     Path appStorageDir = null;
     long totalAvailable = 0L;
@@ -791,4 +835,152 @@ public class DockerContainerExecutor extends ContainerExecutor {
     return paths;
   }
 
+private class LocalScriptExecutor {
+  private boolean inActive;
+  private Container container;
+  private String userName;
+  private Path containerWorkDir;
+  private ContainerId containerId;
+  private String containerIdStr;
+  private Path launchDst;
+  private Path pidFile;
+  private String commandStr;
+  private ShellCommandExecutor shExec;
+  private String sessionScript;
+  private Configuration conf;
+  private String dockerRmCmd;
+
+  public LocalScriptExecutor(Container container, String userName, Path containerWorkDir, ContainerId containerId, String containerIdStr, Path launchDst, Path pidFile, String commandStr, String sessionScript, Configuration conf, String dockerRmCmd) {
+    this.container = container;
+    this.userName = userName;
+    this.containerWorkDir = containerWorkDir;
+    this.containerId = containerId;
+    this.containerIdStr = containerIdStr;
+    this.launchDst = launchDst;
+    this.pidFile = pidFile;
+    this.commandStr = commandStr;
+    this.sessionScript = sessionScript;
+    this.conf = conf;
+    this.dockerRmCmd = dockerRmCmd;
+  }
+
+  boolean is() {
+    return inActive;
+  }
+
+  public ShellCommandExecutor getShExec() {
+    return shExec;
+  }
+
+  public LocalScriptExecutor invoke() throws IOException {
+    LocalWrapperScriptBuilder sb =
+      new UnixLocalWrapperScriptBuilder(containerWorkDir, commandStr, sessionScript, dockerRmCmd);
+
+    sb.writeLocalWrapperScript(launchDst, pidFile);
+
+    shExec = null;
+
+
+    lfs.setPermission(launchDst,
+        ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
+    lfs.setPermission(sb.getWrapperScriptPath(),
+        ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
+
+    // Setup command to run
+    String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
+      containerIdStr, userName, pidFile, this.conf);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("launchContainer: " + commandStr + " " + Joiner.on(", ").join(command));
+    }
+    shExec = new ShellCommandExecutor(
+        command,
+        new File(containerWorkDir.toUri().getPath()),
+        container.getLaunchContext().getEnvironment());      // sanitized env
+
+    if (isContainerActive(containerId)) {
+        shExec.execute();
+    } else {
+      LOG.info("Container " + containerIdStr +
+              " was marked as inactive. Returning terminated error");
+      inActive = true;
+      return this;
+    }
+    inActive = false;
+    return this;
+  }
+}
+
+private class LocalScriptExecutorBuilder {
+private Container container;
+private String userName;
+private Path containerWorkDir;
+private ContainerId containerId;
+private String containerIdStr;
+private Path launchDst;
+private Path pidFile;
+private String commandStr;
+private Configuration conf;
+private String sessionScript;
+private String dockerRmCmd;
+
+public LocalScriptExecutorBuilder setContainer(Container container) {
+  this.container = container;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setUserName(String userName) {
+  this.userName = userName;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setContainerWorkDir(Path containerWorkDir) {
+  this.containerWorkDir = containerWorkDir;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setContainerId(ContainerId containerId) {
+  this.containerId = containerId;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setContainerIdStr(String containerIdStr) {
+  this.containerIdStr = containerIdStr;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setLaunchDst(Path launchDst) {
+  this.launchDst = launchDst;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setPidFile(Path pidFile) {
+  this.pidFile = pidFile;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setCommandStr(String commandStr) {
+  this.commandStr = commandStr;
+  return this;
+}
+
+
+public LocalScriptExecutorBuilder setSessionScript(String rmCmd) {
+  this.sessionScript = rmCmd;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setDockerRmCmd(String rmCmd) {
+  this.dockerRmCmd = rmCmd;
+  return this;
+}
+
+public LocalScriptExecutorBuilder setConf(Configuration conf) {
+  this.conf = conf;
+  return this;
+}
+
+public LocalScriptExecutor createLocalScriptExecutor() {
+  return new LocalScriptExecutor(container, userName, containerWorkDir, containerId, containerIdStr, launchDst, pidFile, commandStr, sessionScript, conf, dockerRmCmd);
+}
+}
 }

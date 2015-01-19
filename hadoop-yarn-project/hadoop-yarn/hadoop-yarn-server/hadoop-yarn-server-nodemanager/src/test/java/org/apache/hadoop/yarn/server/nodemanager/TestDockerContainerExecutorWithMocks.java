@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import com.google.common.base.Strings;
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -49,9 +49,9 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 
 /**
  * Mock tests for docker container executor
@@ -212,42 +212,30 @@ public class TestDockerContainerExecutorWithMocks {
     //get the script
     Path sessionScriptPath = new Path(workDir,
         Shell.appendScriptExtension(
-            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT));
+            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT_CREATE));
     LineNumberReader lnr = new LineNumberReader(new FileReader(sessionScriptPath.toString()));
     boolean cmdFound = false;
     List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
     List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
     List<String> workDirMount = dirsToMount(Collections.singletonList(workDir.toUri().getPath()));
     List<String> expectedCommands =  new ArrayList<String>(
-        Arrays.asList(DOCKER_LAUNCH_COMMAND, "run", "--rm", "--net=host",  "--name", containerId));
+        Arrays.asList(DOCKER_LAUNCH_COMMAND, "create", "--net=host",  "--name", containerId));
     expectedCommands.addAll(localDirs);
     expectedCommands.addAll(logDirs);
     expectedCommands.addAll(workDirMount);
-    String shellScript =  workDir + "/launch_container.sh";
+    String shellScript =  "bash " + workDir + "/launch_container.sh";
 
-    expectedCommands.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), "bash","\"" + shellScript + "\""));
-
-    String expectedPidString = "echo `/bin/true inspect --format {{.State.Pid}} " + containerId+"` > "+ pidFile.toString() + ".tmp";
-    boolean pidSetterFound = false;
+    expectedCommands.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), shellScript));
     while(lnr.ready()){
       String line = lnr.readLine();
       LOG.debug("line: " + line);
-      if (line.startsWith(DOCKER_LAUNCH_COMMAND)){
-        List<String> command = new ArrayList<String>();
-        for( String s :line.split("\\s+")){
-          command.add(s.trim());
-        }
-
-        assertEquals(expectedCommands, command);
+     if (line.startsWith(DOCKER_LAUNCH_COMMAND + " create ")){
+        assertEquals(Joiner.on(" ").join(expectedCommands), line);
         cmdFound = true;
-      } else if (line.startsWith("echo")) {
-        assertEquals(expectedPidString, line);
-        pidSetterFound = true;
       }
 
     }
     assertTrue(cmdFound);
-    assertTrue(pidSetterFound);
   }
 
   private List<String> dirsToMount(List<String> dirs) {
