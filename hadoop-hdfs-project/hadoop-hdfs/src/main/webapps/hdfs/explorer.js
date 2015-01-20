@@ -358,20 +358,6 @@
     });
   });
 
-  function create_directory(pwd) {
-    var url = '/webhdfs/v1' + pwd + '?op=MKDIRS';
-
-    $.ajax(url,
-      { type: 'PUT',
-        crossDomain: true
-      }).done(function(data) {
-        browse_directory(current_directory);
-    }).error(network_error_handler(url)
-     ).complete(function() {
-       $('#create-directory').modal('hide');
-       $('#create-directory-button').button('reset');
-     });
-  }
 
   $('#create-directory').on('show.bs.modal', function(event) {
     var modal = $(this)
@@ -379,8 +365,20 @@
     $('#create-directory-button').on('click', function () {
       $(this).prop('disabled', true);
       $(this).button('complete');
-      create_directory(append_path(current_directory,
-        $('#new_directory').val()));
+
+      var url = '/webhdfs/v1' + append_path(current_directory,
+        $('#new_directory').val()) + '?op=MKDIRS';
+
+      $.ajax(url,
+        { type: 'PUT',
+          crossDomain: true
+        }).done(function(data) {
+          browse_directory(current_directory);
+      }).error(network_error_handler(url)
+       ).complete(function() {
+         $('#create-directory').modal('hide');
+         $('#create-directory-button').button('reset');
+       });
     })
   });
 
