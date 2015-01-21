@@ -200,8 +200,8 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   color: #fff;
 }
 
-#ui-tabs > li > a {
-  color: #dcf0d3;
+#ui-tabs > li > a, nav.navbar-inverse .navbar-nav>.dropdown>a>b.caret {
+  color: #dcf0d3; !important
 }
 
 #ui-tabs .active a {
@@ -229,4 +229,28 @@ td:hover .ghostPencil {
 td.perms {
   padding: 0px 20px;
   text-align: center;
+}
+
+div.row {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.caret.caret-white {
+     border-top-color: white;
+     border-bottom-color: white;
+}
+
+.nav>li>a:hover, .nav>li>a:hover .caret, .nav>li>a:focus, .nav>li>a:focus .caret, .nav a:hover .caret {
+    color: white;
+    /*background-color: #446633;*/
+}
+
+.nav .open>a, .nav .open>a:hover, .nav .open>a:focus, .nav .open>a .caret, .nav .open>a:hover .caret, .nav .open>a:focus .caret {
+    color: white;
+    /*background-color: #446633;*/
+}
+
+header.nav.bs-docs-nav.navbar-inverse {
+    border: 0;
 }
