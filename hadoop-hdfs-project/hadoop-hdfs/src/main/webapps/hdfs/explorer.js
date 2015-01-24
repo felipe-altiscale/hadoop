@@ -83,30 +83,18 @@
     return data.RemoteException !== undefined ? data.RemoteException.message : "";
   }
 
-  /* This method displays the modal to change replication count */
-  function view_replication_details(repl) {
-    $('#owner-info-title').text("Replication information - " + inode_name);
-
-    $('#replication-count').val(repl);
-    $('#set-replication-button').click(setReplication);
-    $('#replication-info').modal();
-  }
-
   /* This method uses WebHDFS to set the replication of a file */
-  function setReplication() {
+  function setReplication(repl) {
     var url = '/webhdfs/v1' + absolute_file_path + '?op=SETREPLICATION'
-    + '&replication=' + $('#replication-count').val();
+    + '&replication=' + repl;
 
     $.ajax(url,
       { type: 'PUT',
         crossDomain: true
-      }).done(function(data) {
+      }).error(network_error_handler(url)
+       ).success(function(data) {
         browse_directory(current_directory);
-    }).error(network_error_handler(url)
-     ).complete(function() {
-       $('#replication-info').modal('hide');
-       $('#set-replication-button').button('reset');
-     });
+      });
   }
 
   // Use WebHDFS to set owner and group on an absolute path
@@ -118,11 +106,9 @@
       { type: 'PUT',
         crossDomain: true
       }).error(network_error_handler(url)
-     ).complete(function() {
-       $('#owner-info').modal('hide');
-       $('#set-owner-button').button('reset');
-       browse_directory(current_directory);
-     });
+       ).success(function() {
+          browse_directory(current_directory);
+       });
   }
 
   /* This method loads the checkboxes on the permission info modal. It accepts
@@ -177,11 +163,11 @@
         crossDomain: true
       }).done(function(data) {
         browse_directory(current_directory);
-    }).error(network_error_handler(url)
-     ).complete(function() {
-      $('#perm-info').modal('hide');
-      $('#set-perm-button').button('reset');
-    });
+      }).error(network_error_handler(url)
+       ).complete(function() {
+         $('#perm-info').modal('hide');
+         $('#set-perm-button').button('reset');
+      });
   }
 
   function view_file_details(path, abs_path) {
@@ -292,26 +278,21 @@
           }
         });
         //Disable line breaks in owner / group fields
-        $('.explorer-owner-links').keypress(function(e){
-          if(e.which == 13) {
-            $('.explorer-owner-links').removeClass('editing');
-            $('.explorer-owner-links').blur();
-          }
-        });
+        $('.explorer-owner-links').keypress(function(e){ return e.which != 13 });
 
         //Set the handler for changing replication
-        $('.explorer-replication-links').click(function() {
+        $('.explorer-replication-links').blur(function() {
           inode_name = $(this).closest('tr').attr('inode-name');
           absolute_file_path = append_path(current_directory, inode_name);
-          var repl = $(this).closest('tr').attr('inode-replication');
-          view_replication_details(repl);
+          var repl = $(this).html().trim();
+          setReplication(repl);
         });
-
+        //Disable line breaks in replication field
+        $('.explorer-replication-links').keypress(function(e){ return e.which != 13 });
 
       });
     }).error(network_error_handler(url));
   }
-
 
   function init() {
     dust.loadSource(dust.compile($('#tmpl-explorer').html(), 'explorer'));
@@ -357,7 +338,6 @@
       $('#upload-file-button').button('reset');
     });
   });
-
 
   $('#create-directory').on('show.bs.modal', function(event) {
     var modal = $(this)
