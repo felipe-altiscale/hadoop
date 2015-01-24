@@ -18,7 +18,10 @@ Trunk (Unreleased)
     HADOOP-6590. Add a username check for hadoop sub-commands (John Smith via aw)
 
     HADOOP-11353. Add support for .hadooprc (aw)
-    
+
+    HADOOP-11490. Expose truncate API via FileSystem and shell command.
+    (Milan Desai via shv)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -385,6 +388,8 @@ Release 2.7.0 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-11483. HardLink.java should use the jdk7 createLink method (aajisaka)
+
     HADOOP-11156. DelegateToFileSystem should implement
     getFsStatus(final Path f). (Zhihai Xu via wang)
 
@@ -478,6 +483,20 @@ Release 2.7.0 - UNRELEASED
     HADOOP-11465. Fix findbugs warnings in hadoop-gridmix. (Varun Saxena via
     Arpit Agarwal)
 
+    HADOOP-11481. ClassCastException while using a key created by keytool to
+    create encryption zone. (Charles Lamb via Colin P. Mccabe)
+
+    HADOOP-8757. Metrics should disallow names with invalid characters
+    (rchiang via rkanter)
+
+    HADOOP-11261 Set custom endpoint for S3A. (Thomas Demoor via stevel)
+
+    HADOOP-11171 Enable using a proxy server to connect to S3a.
+    (Thomas Demoor via stevel)
+
+    HADOOP-11489 Dropping dependency on io.netty from hadoop-nfs' pom.xml
+    (Ted Yu via ozawa)
+
   OPTIMIZATIONS
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
@@ -493,6 +512,11 @@ Release 2.7.0 - UNRELEASED
     full. (Eric Hanson via cnauroth)
 
   BUG FIXES
+
+    HADOOP-11256. Some site docs have inconsistent appearance (Masatake 
+    Iwasaki via aw)
+
+    HADOOP-11318. Update the document for hadoop fs -stat (aajisaka)
 
     HADOOP 11400. GraphiteSink does not reconnect to Graphite after 'broken pipe' 
     (Kamil Gorlo via raviprak)
@@ -700,6 +724,40 @@ Release 2.7.0 - UNRELEASED
 
     HADOOP-11462. TestSocketIOWithTimeout needs change for PowerPC platform.
     (Ayappan via cnauroth)
+
+    HADOOP-11350. The size of header buffer of HttpServer is too small when
+    HTTPS is enabled. (Benoy Antony via wheat9)
+
+    HADOOP-10542 Potential null pointer dereference in Jets3tFileSystemStore
+    retrieveBlock(). (Ted Yu via stevel)	
+
+    HADOOP-10668. TestZKFailoverControllerStress#testExpireBackAndForth
+    occasionally fails. (Ming Ma via cnauroth)
+
+    HADOOP-11327. BloomFilter#not() omits the last bit, resulting in an
+    incorrect filter (Eric Payne via jlowe)
+
+    HADOOP-11466. FastByteComparisons: do not use UNSAFE_COMPARER on the SPARC
+    architecture because it is slower there (Suman Somasundar via Colin P.
+    McCabe)
+
+    HADOOP-11209. Configuration#updatingResource/finalParameters are not
+    thread-safe. (Varun Saxena via ozawa)
+
+    HADOOP-11500. InputStream is left unclosed in ApplicationClassLoader.
+    (Ted Yu via ozawa)
+
+    HADOOP-11008. Remove duplicated description about proxy-user in site 
+    documents (Masatake Iwasaki via aw)
+
+    HADOOP-11493. Fix some typos in kms-acls.xml description.
+    (Charles Lamb via aajisaka)
+
+    HADOOP-11507 Hadoop RPC Authentication problem with different user locale.
+    (Talat UYARER via stevel)
+
+    HADOOP-11482. Use correct UGI when KMSClientProvider is called by a proxy
+    user. Contributed by Arun Suresh.
 
 Release 2.6.0 - 2014-11-18
 
