@@ -214,16 +214,20 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   display: none;
 }
 
+.explorer-perm-links {
+    margin: 10px;
+}
+
+.ghostPencil {
+    padding-right: 16px;
+}
+
 td:hover .ghostPencil {
   background:url("/static/images/pencil.png") no-repeat right;
-  padding-right:17px;
   cursor:pointer;
-  width: 16px;
-  -o-transition:.5s;
-  -ms-transition:.5s;
-  -moz-transition:.5s;
-  -webkit-transition:.5s;
-  transition:.5s;
+  width: 16px !important;
+  height: 16px !important;
+  padding-right: 16px;
 }
 
 td.perms {
