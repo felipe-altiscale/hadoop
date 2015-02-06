@@ -136,7 +136,7 @@
    * chmod to assume ommitted digits to be leading zeros.
    */
   function convertCheckboxesToOctalPermissions() {
-    var p = 0
+    var p = 0;
     p += $( '#sticky' ).prop( 'checked' ) ? 1000 : 0;
     p += $( '#perm-ur' ).prop( 'checked' ) ? 400 : 0;
     p += $( '#perm-uw' ).prop( 'checked' ) ? 200 : 0;
@@ -305,6 +305,23 @@
       window.location.hash = "/";
     } else {
       browse_directory(dir);
+
+    $(document).on('click', '.edit-content', function(event) {
+        var elementToEdit =  $(this).attr('edit-content');
+        var editTemplate = "<div class='editButtons'>" +
+            '<span class="input-group">' +
+            '<input type="text" class="form-control input-sm" value="' + elementToEdit + '">' +
+            '<span class="input-group-addon btn input-save-btn">' +
+            '<span class="glyphicon glyphicon-ok" aria-hidden="true"></span>' +
+            '</span>' +
+            '<span class="input-close-btn">' +
+            '<span class="glyphicon glyphicon-remove pull-right" aria-hidden="true"></span>' +
+            '</span>' +
+            '</span>' +
+        "</div>";
+        var oldContent = $(this).html();
+        $(this).html(editTemplate);
+    });
     }
   }
 
@@ -314,7 +331,7 @@
       pwd = pwd + '/';
     }
 
-    var modal = $(this)
+    var modal = $(this);
     $('#upload-file-button').on('click', function() {
       $(this).prop('disabled', true);
       $(this).button('complete');

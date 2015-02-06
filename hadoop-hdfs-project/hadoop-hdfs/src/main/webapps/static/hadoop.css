@@ -258,3 +258,20 @@ div.row {
 header.nav.bs-docs-nav.navbar-inverse {
     border: 0;
 }
+
+.input-close-btn {
+    display: inline-table;
+    vertical-align: middle;
+    width: auto;
+}
+
+.input-save-btn {
+    border-top-right-radius: 4px !important;
+    border-bottom-right-radius: 4px !important;
+    border-left: 0 !important;
+    color: #357ebd;
+}
+
+.input-save-btn:hover {
+    color: #357ebd;
+}

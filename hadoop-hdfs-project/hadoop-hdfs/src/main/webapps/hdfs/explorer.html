@@ -336,20 +336,20 @@
         {#FileStatus}
         <tr inode-name="{pathSuffix}" inode-owner="{owner}" inode-group="{group}"
             inode-replication="{replication}">
-            <td><span class="explorer-perm-links ghostPencil">
+            <td class="col-sm-1"><span class="explorer-perm-links ghostPencil">
                   {type|helper_to_directory}{permission|helper_to_permission}
                   {aclBit|helper_to_acl_bit}
                 </span></td>
-            <td><span contenteditable="true" class=
+            <td class="edit-content col-sm-1" edit-content="{owner}"><span contenteditable="true" class=
                     "explorer-owner-links ghostPencil owner">{owner}</span></td>
-            <td><span contenteditable="true" class=
+            <td class="edit-content col-sm-1"><span contenteditable="true" class=
                     "explorer-owner-links ghostPencil group">{group}</span></td>
-            <td>{length|fmt_bytes}</td>
-            <td><span contenteditable="true" class=
+            <td class="edit-content col-sm-1">{length|fmt_bytes}</td>
+            <td class="edit-content col-sm-1"><span contenteditable="true" class=
                     "explorer-replication-links ghostPencil">{replication}
                 </span></td>
-            <td>{blockSize|fmt_bytes}</td>
-            <td><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
+            <td class="col-sm-1">{blockSize|fmt_bytes}</td>
+            <td class="col-sm-1"><a style="cursor:pointer" inode-type="{type}" class="explorer-browse-links">{pathSuffix}</a></td>
         </tr>
         {/FileStatus}
         </tbody>
