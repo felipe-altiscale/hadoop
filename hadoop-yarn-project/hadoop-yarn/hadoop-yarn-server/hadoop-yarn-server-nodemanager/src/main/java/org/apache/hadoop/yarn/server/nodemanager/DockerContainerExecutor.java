@@ -60,7 +60,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -70,8 +69,6 @@ import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
  * This executor will launch a docker container and run the task inside the container.
  */
 public class DockerContainerExecutor extends ContainerExecutor {
-  private static final String LINE_SEPARATOR =
-        System.getProperty("line.separator");
   private static final Log LOG = LogFactory
       .getLog(DockerContainerExecutor.class);
   public static final String DOCKER_CONTAINER_EXECUTOR_SCRIPT = "docker_container_executor";
@@ -232,7 +229,6 @@ public DockerContainerExecutor() {
 
     // Create new local launch wrapper script
     ShellCommandExecutor shExec = null;
-    ExecutorService executorService = null;
     try {
       LocalScriptExecutor localScriptExecutor = new LocalScriptExecutorBuilder()
               .setContainer(container)
@@ -307,9 +303,6 @@ public DockerContainerExecutor() {
     } finally {
       if (shExec != null) {
         shExec.close();
-      }
-      if (executorService != null) {
-        executorService.shutdown();
       }
     }
     return 0;

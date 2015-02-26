@@ -25,9 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell;
 
 import java.io.BufferedReader;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -98,7 +99,8 @@ class DockerEventSubscriber {
         throw new Shell.ExitCodeException(exitCode, "Error: " + dockerPidScript + " error msg: " + errMsg);
       }
 
-      try (FileWriter fw = new FileWriter(pidFile.toString())) {
+      try (OutputStreamWriter fw = new OutputStreamWriter(new FileOutputStream(pidFile.toString()),
+              Charset.forName("UTF-8").newEncoder())) {
         fw.write(line);
         if (LOG.isDebugEnabled()) {
           LOG.debug("wrote pid: " + line + " file: " + pidFile);

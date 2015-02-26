@@ -20,10 +20,9 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import org.apache.hadoop.yarn.event.AbstractEvent;
 
-import java.io.Serializable;
-
-abstract  class DockerEvent extends AbstractEvent<DockerEventType> implements Serializable{
+abstract  class DockerEvent extends AbstractEvent<DockerEventType> {
 final String dockerContainerId;
+
 public DockerEvent(String dockerContainerId, DockerEventType dockerEventType) {
   super(dockerEventType);
   this.dockerContainerId = dockerContainerId;

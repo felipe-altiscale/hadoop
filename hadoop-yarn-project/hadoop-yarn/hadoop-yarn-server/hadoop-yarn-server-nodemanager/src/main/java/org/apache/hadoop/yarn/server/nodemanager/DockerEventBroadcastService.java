@@ -26,8 +26,10 @@ import org.apache.hadoop.service.AbstractService;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 class DockerEventBroadcastService extends AbstractService {
@@ -48,28 +50,28 @@ private static final Log LOG = LogFactory
 protected void serviceStart() throws Exception {
   final String dockerEventsCmd = dockerExecutor + " events";
 
-  executorService.submit(new Callable<Void>() {
+  Future<Void> f = executorService.submit(new Callable<Void>() {
     @Override
     public Void call() throws Exception {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("started call " + dockerEventsCmd);
-      }
-      ProcessBuilder pb = new ProcessBuilder(dockerEventsCmd.split(" "));
-      pb.redirectErrorStream(true);
-
-      final Process process = pb.start();
-      try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-      String line = br.readLine();
-      while (line != null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("line " + line);
+          LOG.debug("started call " + dockerEventsCmd);
         }
-        if (line != null) {
+        ProcessBuilder pb = new ProcessBuilder(dockerEventsCmd.split(" "));
+        pb.redirectErrorStream(true);
+
+        final Process process = pb.start();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream(), "UTF-8"))) {
+        String line = br.readLine();
+        while (line != null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("line " + line);
+          }
           String[] words = line.split(" ");
           String cid = words[1].substring(0, words[1].length() - 1);
           switch (words[4]) {
             case "create":
               eventBus.post(new DockerEvent.DockerContainerCreatedEvent(cid));
+              break;
             case "start":
               LOG.debug("Launched an event " + cid);
               eventBus.post(new DockerEvent.DockerContainerStartedEvent(cid));
@@ -80,16 +82,20 @@ protected void serviceStart() throws Exception {
             default:
               LOG.warn("unknown event: " + words[4]);
           }
+          line = br.readLine();
         }
-        line = br.readLine();
-      }
-
       }
       return null;
-
     }
   });
-
+  try {
+    f.get();
+  } catch (ExecutionException ex) {
+    if(ex.getCause() != null) {
+      throw new RuntimeException(ex.getCause());
+    }
+    throw ex;
+  }
 }
 
 @Override
