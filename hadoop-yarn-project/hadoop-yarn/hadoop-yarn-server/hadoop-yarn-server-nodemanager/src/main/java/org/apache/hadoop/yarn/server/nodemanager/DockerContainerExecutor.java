@@ -194,8 +194,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
         new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
     lfs.util().copy(nmPrivateTokensPath, tokenDst);
 
-    int memoryBytes = container.getResource().getMemory();
-    int vCores = container.getResource().getVirtualCores();
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
     String containerWorkDirMount = toMount(Collections.singletonList(containerWorkDir.toUri().getPath()));
@@ -207,10 +205,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
         .append("--rm --net=host")
         .append(" ")
         .append(" --name " + containerIdStr)
-        .append(" ")
-        .append("--memory " + memoryBytes + "m")
-        .append(" ")
-        .append("--cpu-shares " + vCores)
         .append(" ")
         .append("--user " + userName)
         .append(" ")
