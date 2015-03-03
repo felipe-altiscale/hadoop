@@ -149,7 +149,6 @@ public class DockerContainerExecutor extends ContainerExecutor {
                              List<String> localDirs, List<String> logDirs) throws IOException {
     String containerImageName = container.getLaunchContext().getEnvironment()
         .get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
-    containerImageName = Strings.isNullOrEmpty(containerImageName) ? getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME) : containerImageName;
     if (LOG.isDebugEnabled()) {
       LOG.debug("containerImageName from launchContext: " + containerImageName);
     }

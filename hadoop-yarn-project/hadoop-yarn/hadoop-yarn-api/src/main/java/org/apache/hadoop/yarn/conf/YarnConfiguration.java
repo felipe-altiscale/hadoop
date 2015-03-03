@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -33,6 +28,11 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 @Public
 @Evolving
@@ -937,7 +937,18 @@ public class YarnConfiguration extends Configuration {
   /** The default docker executor (For DockerContainerExecutor).*/
   public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
           "/usr/bin/docker";
-
+  /**
+   * True if linux-container-executor should limit itself to one user
+   * when running in non-secure mode.
+   */
+  public static final String NM_DOCKER_NONSECURE_MODE_LIMIT_USERS = NM_PREFIX +
+        "docker-container-executor.nonsecure-mode.limit-users";
+  /**
+   * The UNIX user that containers will run as when Docker-container-executor
+   * is used in nonsecure mode (a use case for this is using cgroups).
+   */
+  public static final String NM_DOCKER_NONSECURE_MODE_LOCAL_USER_KEY = NM_PREFIX +
+          "docker-container-executor.nonsecure-mode.local-user";
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
     NM_PREFIX + "linux-container-executor.path";
