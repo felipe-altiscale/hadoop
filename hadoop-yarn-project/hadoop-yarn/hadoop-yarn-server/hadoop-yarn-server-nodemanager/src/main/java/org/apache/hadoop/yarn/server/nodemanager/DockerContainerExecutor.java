@@ -52,6 +52,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -79,7 +80,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
   private final FileContext lfs;
   private final Pattern dockerImagePattern;
-
+  private String containerExecutorExe;
   public DockerContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
@@ -108,6 +109,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     if (!new File(arr[0]).exists()) {
       throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
     }
+    containerExecutorExe = getContainerExecutorExecutablePath(getConf());
  }
 
   @Override
@@ -202,7 +204,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         .append(" ")
         .append("run")
         .append(" ")
-        .append("--rm --net=host")
+        .append("--net=host")
         .append(" ")
         .append(" --name " + containerIdStr)
         .append(" ")
@@ -228,7 +230,21 @@ public class DockerContainerExecutor extends ContainerExecutor {
     }
     
     ShellCommandExecutor shExec = null;
+    List<String> createDirCommand = new ArrayList<String>();
+    createDirCommand.addAll(Arrays.asList(
+            containerExecutorExe, userName, userName, Integer
+                    .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
+            containerIdStr, containerWorkDir.toString(),
+            nmPrivateContainerScriptPath.toUri().getPath().toString(),
+            nmPrivateTokensPath.toUri().getPath().toString(),
+            StringUtils.join(",", localDirs),
+            StringUtils.join(",", logDirs)));
+    shExec = new ShellCommandExecutor(createDirCommand.toArray(new String[createDirCommand.size()])
+            , null, // NM's cwd
+            container.getLaunchContext().getEnvironment()); // sanitized env
+    shExec.execute();
     try {
+
       lfs.setPermission(launchDst,
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
       lfs.setPermission(sb.getWrapperScriptPath(),
@@ -501,6 +517,11 @@ public class DockerContainerExecutor extends ContainerExecutor {
       throws IOException {
       DataOutputStream out = null;
       PrintStream pout = null;
+      PrintStream ps = null;
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      if (LOG.isDebugEnabled()) {
+        ps = new PrintStream(baos, false, "UTF-8");
+      }
       try {
         out = lfs.create(sessionScriptPath, EnumSet.of(CREATE, OVERWRITE));
         pout = new PrintStream(out, false, "UTF-8");
@@ -509,10 +530,24 @@ public class DockerContainerExecutor extends ContainerExecutor {
         // hence write pid to tmp file first followed by a mv
         pout.println("#!/usr/bin/env bash");
         pout.println();
+
+        pout.println("cp -r " + launchDst.getParent().toUri().getPath() + " /root ");
         pout.println("echo "+ dockerPidScript +" > " + pidFile.toString() + ".tmp");
         pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-        pout.println(dockerCommand + " bash \"" +
+        pout.println("chown 999 " + launchDst.toUri().getPath().toString() + " && " + dockerCommand + " bash \"" +
           launchDst.toUri().getPath().toString() + "\"");
+
+        if (LOG.isDebugEnabled()) {
+          ps.println("#!/usr/bin/env bash");
+          ps.println();
+          ps.println("chown jetty " + launchDst.toUri().getPath().toString());
+          ps.println("cp -r " + launchDst.getParent().toUri().getPath() + " /root ");
+          ps.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
+          ps.println(dockerCommand + " bash \"" +
+          launchDst.toUri().getPath().toString() + "\"");
+          LOG.debug("Session Script: " + baos.toString("UTF-8"));
+
+        }
       } finally {
         IOUtils.cleanup(LOG, pout, out);
       }
@@ -671,22 +706,22 @@ public class DockerContainerExecutor extends ContainerExecutor {
    * Permissions for user appcache dir.
    * $local.dir/usercache/$user/appcache
    */
-  static final short APPCACHE_PERM = (short) 0710;
+  static final short APPCACHE_PERM = (short) 0750;
   /**
    * Permissions for user filecache dir.
    * $local.dir/usercache/$user/filecache
    */
-  static final short FILECACHE_PERM = (short) 0710;
+  static final short FILECACHE_PERM = (short) 0750;
   /**
    * Permissions for user app dir.
    * $local.dir/usercache/$user/appcache/$appId
    */
-  static final short APPDIR_PERM = (short) 0710;
+  static final short APPDIR_PERM = (short) 0750;
   /**
    * Permissions for user log dir.
    * $logdir/$user/$appId
    */
-  static final short LOGDIR_PERM = (short) 0710;
+  static final short LOGDIR_PERM = (short) 0750;
 
   private long getDiskFreeSpace(Path base) throws IOException {
     return lfs.getFsStatus(base).getRemaining();
