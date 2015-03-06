@@ -304,7 +304,7 @@ public class DeletionService extends AbstractService {
         }
       }
       if (error) {
-        setSuccess(!error);        
+        setSuccess(!error);
       }
       fileDeletionTaskFinished();
     }

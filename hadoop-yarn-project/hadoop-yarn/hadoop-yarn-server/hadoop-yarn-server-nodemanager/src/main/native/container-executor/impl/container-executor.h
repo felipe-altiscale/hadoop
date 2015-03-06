@@ -25,6 +25,7 @@ enum command {
   LAUNCH_CONTAINER = 1,
   SIGNAL_CONTAINER = 2,
   DELETE_AS_USER = 3,
+  CREATE_CONTAINER_DIRS = 4
 };
 
 enum errorcodes {

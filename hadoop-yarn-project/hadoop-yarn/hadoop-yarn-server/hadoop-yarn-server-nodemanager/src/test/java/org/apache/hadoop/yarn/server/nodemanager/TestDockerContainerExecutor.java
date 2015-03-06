@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,12 +35,15 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
@@ -70,7 +74,7 @@ public class TestDockerContainerExecutor {
   private int id = 0;
   private String appSubmitter;
   private String dockerUrl;
-  private String testImage = "centos";
+  private String testImage = "jetty";
   private String dockerExec;
   private String containerIdStr;
 
@@ -113,7 +117,7 @@ public class TestDockerContainerExecutor {
     exec.setConf(conf);
     appSubmitter = System.getProperty("application.submitter");
     if (appSubmitter == null || appSubmitter.isEmpty()) {
-      appSubmitter = "root";
+      appSubmitter = "jetty";
     }
     shellExec(dockerExec + " pull " + testImage);
 
@@ -139,10 +143,9 @@ public class TestDockerContainerExecutor {
 
   private int runAndBlock(ContainerId cId, Map<String, String> launchCtxEnv, String... cmd) throws IOException {
     String appId = "APP_" + System.currentTimeMillis();
-    Container container = mock(Container.class, RETURNS_DEEP_STUBS);
+    Container container = mock(Container.class);
     ContainerLaunchContext context = mock(ContainerLaunchContext.class);
-    when(container.getResource().getMemory()).thenReturn(4194304);
-    when(container.getResource().getVirtualCores()).thenReturn(10);
+
     when(container.getContainerId()).thenReturn(cId);
     when(container.getLaunchContext()).thenReturn(context);
     when(cId.getApplicationAttemptId().getApplicationId().toString()).thenReturn(appId);
@@ -164,16 +167,35 @@ public class TestDockerContainerExecutor {
   private String writeScriptFile(Map<String, String> launchCtxEnv, String... cmd) throws IOException {
     File f = File.createTempFile("TestDockerContainerExecutor", ".sh");
     f.deleteOnExit();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter p = new PrintWriter(new FileOutputStream(f));
+    PrintWriter q = new PrintWriter(baos);
+    Set<String> exclusionSet = new HashSet<String>();
+    exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+    exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+    exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
     for(Map.Entry<String, String> entry: launchCtxEnv.entrySet()) {
-      p.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
+      if (!exclusionSet.contains(entry.getKey())) {
+        p.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
+        q.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
+      }
     }
     for (String part : cmd) {
       p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
       p.print(" ");
+      q.print(part.replace("\\", "\\\\").replace("'", "\\'"));
+      q.print(" ");
     }
     p.println();
     p.close();
+    q.println();
+    q.close();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Launch script: " + baos.toString("UTF-8"));
+    }
     return f.getAbsolutePath();
   }
 
@@ -196,10 +218,9 @@ public class TestDockerContainerExecutor {
     Map<String, String> env = new HashMap<String, String>();
     env.put(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, testImage);
     String touchFileName = "touch-file-" + System.currentTimeMillis();
-    File touchFile = new File(dirsHandler.getLocalDirs().get(0), touchFileName);
     ContainerId cId = getNextContainerId();
     int ret = runAndBlock(
-        cId, env, "touch", touchFile.getAbsolutePath(), "&&", "cp", touchFile.getAbsolutePath(), "/");
+        cId, env, "touch", "/tmp/" + touchFileName);
 
     assertEquals(0, ret);
   }

@@ -53,6 +53,10 @@ void display_usage(FILE *stream) {
   fprintf(stream, "Commands:\n");
   fprintf(stream, "   initialize container: %2d appid tokens " \
    "nm-local-dirs nm-log-dirs cmd app...\n", INITIALIZE_CONTAINER);
+   fprintf(stream,
+         "   launch container:    %2d appid containerid workdir "\
+         "container-script tokens nm-local-dirs nm-log-dirs \n",
+   	  CREATE_CONTAINER_DIRS);
   fprintf(stream,
       "   launch container:    %2d appid containerid workdir "\
       "container-script tokens pidfile nm-local-dirs nm-log-dirs resources\n",
@@ -212,6 +216,25 @@ int main(int argc, char **argv) {
     exit_code = initialize_app(yarn_user_name, app_id, cred_file,
                                extract_values(local_dirs),
                                extract_values(log_dirs), argv + optind);
+    break;
+  case CREATE_CONTAINER_DIRS:
+    if (argc != 11) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create container directories\n",
+          argc);
+      fflush(ERRORFILE);
+      return INVALID_ARGUMENT_NUMBER;
+    }
+    app_id = argv[optind++];
+    container_id = argv[optind++];
+    current_dir = argv[optind++];
+    script_file = argv[optind++];
+    cred_file = argv[optind++];
+    local_dirs = argv[optind++];// good local dirs as a comma separated list
+    log_dirs = argv[optind++];// good log dirs as a comma separated list
+    exit_code = create_local_and_log_dirs(yarn_user_name, app_id,
+                               container_id, current_dir, script_file, cred_file,
+                               extract_values(local_dirs),
+                               extract_values(log_dirs));
     break;
   case LAUNCH_CONTAINER:
     if (argc != 13) {

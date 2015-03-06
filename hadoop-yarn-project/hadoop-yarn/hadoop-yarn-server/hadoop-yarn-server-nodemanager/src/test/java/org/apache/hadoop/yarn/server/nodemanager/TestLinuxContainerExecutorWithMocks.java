@@ -109,7 +109,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testContainerLaunch() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        LinuxContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
+        ContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
     Container container = mock(Container.class);
@@ -241,7 +241,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
     String appSubmitter = "nobody";
     String cmd = String
-        .valueOf(LinuxContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
+        .valueOf(ContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
     Container container = mock(Container.class);
@@ -303,7 +303,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testContainerKill() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        LinuxContainerExecutor.Commands.SIGNAL_CONTAINER.getValue());
+        ContainerExecutor.Commands.SIGNAL_CONTAINER.getValue());
     ContainerExecutor.Signal signal = ContainerExecutor.Signal.QUIT;
     String sigVal = String.valueOf(signal.getValue());
     
@@ -317,7 +317,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testDeleteAsUser() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        LinuxContainerExecutor.Commands.DELETE_AS_USER.getValue());
+        ContainerExecutor.Commands.DELETE_AS_USER.getValue());
     Path dir = new Path("/tmp/testdir");
     Path testFile = new Path("testfile");
     Path baseDir0 = new Path("/grid/0/BaseDir");
