@@ -118,6 +118,31 @@ int initialize_app(const char *user, const char *app_id,
  * @param resources_value values needed to apply resource enforcement
  * @return -1 or errorcode enum value on error (should never return on success).
  */
+int create_local_and_log_dirs(const char *user,const char *app_id,
+                                  const char *container_id,const char *work_dir,
+                                  const char *script_name, const char *cred_file,
+                                  char* const* local_dirs,char* const* log_dirs);
+/*
+ * Function used to launch a container as the provided user. It does the following :
+ * 1) Creates container work dir and log dir to be accessible by the child
+ * 2) Copies the script file from the NM to the work directory
+ * 3) Sets up the environment
+ * 4) Does an execlp on the same in order to replace the current image with
+ *    container image.
+ * @param user the user to become
+ * @param app_id the application id
+ * @param container_id the container id
+ * @param work_dir the working directory for the container.
+ * @param script_name the name of the script to be run to launch the container.
+ * @param cred_file the credentials file that needs to be compied to the
+ * working directory.
+ * @param pid_file file where pid of process should be written to
+ * @param local_dirs nodemanager-local-directories to be used
+ * @param log_dirs nodemanager-log-directories to be used
+ * @param resources_key type of resource enforcement (none, cgroups)
+ * @param resources_value values needed to apply resource enforcement
+ * @return -1 or errorcode enum value on error (should never return on success).
+ */
 int launch_container_as_user(const char * user, const char *app_id,
                      const char *container_id, const char *work_dir,
                      const char *script_name, const char *cred_file,
