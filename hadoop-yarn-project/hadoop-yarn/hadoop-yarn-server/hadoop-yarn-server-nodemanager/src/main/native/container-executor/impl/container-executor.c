@@ -1024,11 +1024,6 @@ int create_local_and_log_dirs(const char *user,const char *app_id,
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
-  exit_code_file = get_exit_code_file(pid_file);
-  if (NULL == exit_code_file) {
-    exit_code = OUT_OF_MEMORY;
-    goto cleanup;
-  }
 
   // open launch script
   int container_file_source = open_file_as_nm(script_name);

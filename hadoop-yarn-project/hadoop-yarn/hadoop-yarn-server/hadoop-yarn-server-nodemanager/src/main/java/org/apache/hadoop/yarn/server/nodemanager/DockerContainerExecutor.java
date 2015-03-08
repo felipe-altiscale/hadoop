@@ -44,13 +44,16 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,6 +62,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -199,6 +207,12 @@ public class DockerContainerExecutor extends ContainerExecutor {
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
     String containerWorkDirMount = toMount(Collections.singletonList(containerWorkDir.toUri().getPath()));
+    long uid = -1l;
+    try {
+      uid = getUid(userName);
+    } catch (InterruptedException e) {
+      throw new RuntimeException("Cannot find uid for user: " + userName);
+    }
     StringBuilder commands = new StringBuilder();
     String commandStr = commands.append(dockerExecutor)
         .append(" ")
@@ -208,7 +222,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
         .append(" ")
         .append(" --name " + containerIdStr)
         .append(" ")
-        .append("--user " + userName)
+        .append("--user " + uid)
         .append(" ")
         .append(localDirMount)
         .append(logDirMount)
@@ -298,7 +312,57 @@ public class DockerContainerExecutor extends ContainerExecutor {
     return 0;
   }
 
-  @Override
+private long getUid(String userName) throws IOException, InterruptedException {
+  long uid = -1l;
+  String findUid = "id -u " + userName;
+  ProcessBuilder processBuilder = new ProcessBuilder(findUid);
+
+  Process process = processBuilder.start();
+  final BufferedReader errReader =
+          new BufferedReader(new InputStreamReader(
+                  process.getErrorStream(), Charset.defaultCharset()));
+  final StringBuffer errMsg = new StringBuffer();
+  ExecutorService service = Executors.newSingleThreadExecutor();
+  Future<Void> f = service.submit(new Callable<Void>() {
+    @Override
+    public Void call() throws Exception {
+
+      String line = errReader.readLine();
+      while (line != null) {
+        errMsg.append(line);
+        errMsg.append(System.getProperty("line.separator"));
+        line = errReader.readLine();
+      }
+      return null;
+    }
+  });
+
+  try {
+    f.get();
+  } catch (ExecutionException e) {
+    LOG.error("Error getting error out: ", e);
+  } finally {
+    if (errReader != null) {
+      errReader.close();
+    }
+  }
+  try(BufferedReader inReader =
+              new BufferedReader(new InputStreamReader(
+                      process.getInputStream(), Charset.defaultCharset()))) {
+    String line = inReader.readLine();
+
+    int exitCode = process.waitFor();
+
+    if (exitCode != 0) {
+      throw new Shell.ExitCodeException(exitCode, "Error: " + findUid + " error msg: " + errMsg);
+    }
+
+    uid = Long.parseLong(line);
+  }
+  return uid;
+}
+
+@Override
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
     ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
 
