@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,7 +30,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -37,7 +37,6 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
@@ -56,17 +55,11 @@ import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
@@ -117,9 +110,15 @@ public class DockerContainerExecutor extends ContainerExecutor {
     if (!new File(arr[0]).exists()) {
       throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
     }
+
+
     containerExecutorExe = getContainerExecutorExecutablePath(getConf());
  }
-
+public void buildMainArgs(List<String> command, String user, String appId,
+                          String locId, InetSocketAddress nmAddr, List<String> localDirs) {
+  ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
+          localDirs);
+}
   @Override
   public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
                                           InetSocketAddress nmAddr, String user, String appId, String locId,
@@ -129,26 +128,47 @@ public class DockerContainerExecutor extends ContainerExecutor {
     List<String> localDirs = dirsHandler.getLocalDirs();
     List<String> logDirs = dirsHandler.getLogDirs();
 
-    ContainerLocalizer localizer =
-      new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
-        RecordFactoryProvider.getRecordFactory(getConf()));
 
-    createUserLocalDirs(localDirs, user);
-    createUserCacheDirs(localDirs, user);
-    createAppDirs(localDirs, user, appId);
-    createAppLogDirs(appId, logDirs, user);
+    String runAsUser = user;
+    List<String> command = new ArrayList<String>();
+//    addSchedPriorityCommand(command);
+    command.addAll(Arrays.asList(containerExecutorExe,
+            runAsUser,
+            user,
+            Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
+            appId,
+            nmPrivateContainerTokensPath.toUri().getPath().toString(),
+            StringUtils.join(",", localDirs),
+            StringUtils.join(",", logDirs)));
 
-    // randomly choose the local directory
-    Path appStorageDir = getWorkingDir(localDirs, user, appId);
-
-    String tokenFn = String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
-    Path tokenDst = new Path(appStorageDir, tokenFn);
-    copyFile(nmPrivateContainerTokensPath, tokenDst, user);
-    LOG.info("Copying from " + nmPrivateContainerTokensPath + " to " + tokenDst);
-    lfs.setWorkingDirectory(appStorageDir);
-    LOG.info("CWD set to " + appStorageDir + " = " + lfs.getWorkingDirectory());
-    // TODO: DO it over RPC for maintaining similarity?
-    localizer.runLocalization(nmAddr);
+    File jvm =                                  // use same jvm as parent
+            new File(new File(System.getProperty("java.home"), "bin"), "java");
+    command.add(jvm.toString());
+    command.add("-classpath");
+    command.add(System.getProperty("java.class.path"));
+    String javaLibPath = System.getProperty("java.library.path");
+    if (javaLibPath != null) {
+      command.add("-Djava.library.path=" + javaLibPath);
+    }
+    buildMainArgs(command, user, appId, locId, nmAddr, localDirs);
+    String[] commandArray = command.toArray(new String[command.size()]);
+    ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("initApplication: " + Arrays.toString(commandArray));
+    }
+    try {
+      shExec.execute();
+      if (LOG.isDebugEnabled()) {
+        logOutput(shExec.getOutput());
+      }
+    } catch (Shell.ExitCodeException e) {
+      int exitCode = shExec.getExitCode();
+      LOG.warn("Exit code from container " + locId + " startLocalizer is : "
+              + exitCode, e);
+      logOutput(shExec.getOutput());
+      throw new IOException("Application " + appId + " initialization failed" +
+              " (exitCode=" + exitCode + ") with output: " + shExec.getOutput(), e);
+    }
   }
 
 
@@ -169,7 +189,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
         YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
 
-    FsPermission dirPerm = new FsPermission(APPDIR_PERM);
+//    FsPermission dirPerm = new FsPermission(APPDIR_PERM);
     ContainerId containerId = container.getContainerId();
 
     // create container dirs on all disks
@@ -178,104 +198,74 @@ public class DockerContainerExecutor extends ContainerExecutor {
         ConverterUtils.toString(
             containerId.getApplicationAttemptId().
                 getApplicationId());
-    for (String sLocalDir : localDirs) {
-      Path usersdir = new Path(sLocalDir, ContainerLocalizer.USERCACHE);
-      Path userdir = new Path(usersdir, userName);
-      Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
-      Path appDir = new Path(appCacheDir, appIdStr);
-      Path containerDir = new Path(appDir, containerIdStr);
-      createDir(containerDir, dirPerm, true, userName);
-    }
-
-    // Create the container log-dirs on all disks
-    createContainerLogDirs(appIdStr, containerIdStr, logDirs, userName);
-
-    Path tmpDir = new Path(containerWorkDir,
-        YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
-    createDir(tmpDir, dirPerm, false, userName);
 
     // copy launch script to work dir
     Path launchDst =
         new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-    lfs.util().copy(nmPrivateContainerScriptPath, launchDst);
 
-    // copy container tokens to work dir
-    Path tokenDst =
-        new Path(containerWorkDir, ContainerLaunch.FINAL_CONTAINER_TOKENS_FILE);
-    lfs.util().copy(nmPrivateTokensPath, tokenDst);
 
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
-    String containerWorkDirMount = toMount(Collections.singletonList(containerWorkDir.toUri().getPath()));
     long uid = -1l;
     try {
       uid = getUid(userName);
     } catch (InterruptedException e) {
       throw new RuntimeException("Cannot find uid for user: " + userName);
     }
-    StringBuilder commands = new StringBuilder();
-    String commandStr = commands.append(dockerExecutor)
-        .append(" ")
-        .append("run")
-        .append(" ")
-        .append("--net=host")
-        .append(" ")
-        .append(" --name " + containerIdStr)
-        .append(" ")
-        .append("--user " + uid)
-        .append(" ")
-        .append(localDirMount)
-        .append(logDirMount)
-        .append(containerWorkDirMount)
-        .append(" ")
-        .append(containerImageName)
-        .toString();
+
+    String[] arr = dockerExecutor.split("\\s");
+    String[] localMounts = localDirMount.trim().split("\\s+");
+    String[] logMounts = logDirMount.trim().split("\\s+");
+    List<String> commandStr = Lists.newArrayList("docker", arr[1], "run", "--net",
+            "host", "--name", containerIdStr, "--user", uid + "", "--workdir",
+            containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
+    commandStr.addAll(Arrays.asList(localMounts));
+    commandStr.addAll(Arrays.asList(logMounts));
+    commandStr.add(containerImageName.trim());
+    commandStr.add("bash");
+    commandStr.add(launchDst.toUri().getPath());
+
     String dockerPidScript = "`" + dockerExecutor + " inspect --format {{.State.Pid}} " + containerIdStr + "`";
     // Create new local launch wrapper script
-    LocalWrapperScriptBuilder sb =
-      new UnixLocalWrapperScriptBuilder(containerWorkDir, commandStr, dockerPidScript);
+//    LocalWrapperScriptBuilder sb =
+//      new UnixLocalWrapperScriptBuilder(containerWorkDir, commandStr, dockerPidScript);
     Path pidFile = getPidFilePath(containerId);
-    if (pidFile != null) {
-      sb.writeLocalWrapperScript(launchDst, pidFile);
-    } else {
-      LOG.info("Container " + containerIdStr
-          + " was marked as inactive. Returning terminated error");
-      return ExitCode.TERMINATED.getExitCode();
-    }
-    
+//    if (pidFile != null) {
+//      sb.writeLocalWrapperScript(launchDst, pidFile);
+//    } else {
+//      LOG.info("Container " + containerIdStr
+//          + " was marked as inactive. Returning terminated error");
+//      return ExitCode.TERMINATED.getExitCode();
+//    }
+//
     ShellCommandExecutor shExec = null;
-    List<String> createDirCommand = new ArrayList<String>();
-    createDirCommand.addAll(Arrays.asList(
-            containerExecutorExe, userName, userName, Integer
-                    .toString(Commands.LAUNCH_CONTAINER.getValue()), appId,
-            containerIdStr, containerWorkDir.toString(),
-            nmPrivateContainerScriptPath.toUri().getPath().toString(),
-            nmPrivateTokensPath.toUri().getPath().toString(),
-            StringUtils.join(",", localDirs),
-            StringUtils.join(",", logDirs)));
-    shExec = new ShellCommandExecutor(createDirCommand.toArray(new String[createDirCommand.size()])
-            , null, // NM's cwd
-            container.getLaunchContext().getEnvironment()); // sanitized env
-    shExec.execute();
     try {
-
-      lfs.setPermission(launchDst,
-          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-      lfs.setPermission(sb.getWrapperScriptPath(),
-          ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
-
       // Setup command to run
-      String[] command = getRunCommand(sb.getWrapperScriptPath().toString(),
-        containerIdStr, userName, pidFile, this.getConf());
       if (LOG.isDebugEnabled()) {
-        LOG.debug("launchContainer: " + commandStr + " " + Joiner.on(" ").join(command));
+        LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
       }
-      shExec = new ShellCommandExecutor(
-          command,
-          new File(containerWorkDir.toUri().getPath()),
-          container.getLaunchContext().getEnvironment());      // sanitized env
-      if (isContainerActive(containerId)) {
+
+      List<String> createDirCommand = new ArrayList<String>();
+      createDirCommand.addAll(Arrays.asList(
+              containerExecutorExe, userName, userName, Integer
+                      .toString(Commands.CREATE_CONTAINER_DIRS.getValue()), appId,
+              containerIdStr, containerWorkDir.toString(),
+              nmPrivateContainerScriptPath.toUri().getPath().toString(),
+              nmPrivateTokensPath.toUri().getPath().toString(),
+              StringUtils.join(",", localDirs),
+              StringUtils.join(",", logDirs)));
+      createDirCommand.addAll(commandStr);
+      shExec = new ShellCommandExecutor(createDirCommand.toArray(new String[createDirCommand.size()])
+              , null, // NM's cwd
+              container.getLaunchContext().getEnvironment()); // sanitized env
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("createDirCommand: " + createDirCommand);
+      }
+   if (isContainerActive(containerId)) {
         shExec.execute();
+        if (LOG.isDebugEnabled()) {
+          logOutput(shExec.getOutput());
+        }
       } else {
         LOG.info("Container " + containerIdStr +
             " was marked as inactive. Returning terminated error");
@@ -315,36 +305,18 @@ public class DockerContainerExecutor extends ContainerExecutor {
 private long getUid(String userName) throws IOException, InterruptedException {
   long uid = -1l;
   String findUid = "id -u " + userName;
-  ProcessBuilder processBuilder = new ProcessBuilder(findUid);
+  ProcessBuilder processBuilder = new ProcessBuilder(findUid.split(" "));
 
   Process process = processBuilder.start();
   final BufferedReader errReader =
           new BufferedReader(new InputStreamReader(
                   process.getErrorStream(), Charset.defaultCharset()));
   final StringBuffer errMsg = new StringBuffer();
-  ExecutorService service = Executors.newSingleThreadExecutor();
-  Future<Void> f = service.submit(new Callable<Void>() {
-    @Override
-    public Void call() throws Exception {
-
-      String line = errReader.readLine();
-      while (line != null) {
-        errMsg.append(line);
-        errMsg.append(System.getProperty("line.separator"));
-        line = errReader.readLine();
-      }
-      return null;
-    }
-  });
-
-  try {
-    f.get();
-  } catch (ExecutionException e) {
-    LOG.error("Error getting error out: ", e);
-  } finally {
-    if (errReader != null) {
-      errReader.close();
-    }
+  String err = errReader.readLine();
+  while (err != null) {
+    errMsg.append(err);
+    errMsg.append(System.getProperty("line.separator"));
+    err = errReader.readLine();
   }
   try(BufferedReader inReader =
               new BufferedReader(new InputStreamReader(
@@ -481,21 +453,21 @@ private long getUid(String userName) throws IOException, InterruptedException {
   @Override
   public void deleteAsUser(String user, Path subDir, Path... baseDirs)
     throws IOException, InterruptedException {
-    if (baseDirs == null || baseDirs.length == 0) {
-      LOG.info("Deleting absolute path : " + subDir);
-      if (!lfs.delete(subDir, true)) {
-        //Maybe retry
-        LOG.warn("delete returned false for path: [" + subDir + "]");
-      }
-      return;
-    }
-    for (Path baseDir : baseDirs) {
-      Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
-      LOG.info("Deleting path : " + del);
-      if (!lfs.delete(del, true)) {
-        LOG.warn("delete returned false for path: [" + del + "]");
-      }
-    }
+//    if (baseDirs == null || baseDirs.length == 0) {
+//      LOG.info("Deleting absolute path : " + subDir);
+//      if (!lfs.delete(subDir, true)) {
+//        //Maybe retry
+//        LOG.warn("delete returned false for path: [" + subDir + "]");
+//      }
+//      return;
+//    }
+//    for (Path baseDir : baseDirs) {
+//      Path del = subDir == null ? baseDir : new Path(baseDir, subDir);
+//      LOG.info("Deleting path : " + del);
+//      if (!lfs.delete(del, true)) {
+//        LOG.warn("delete returned false for path: [" + del + "]");
+//      }
+//    }
   }
 
   /**
@@ -598,13 +570,12 @@ private long getUid(String userName) throws IOException, InterruptedException {
         pout.println("cp -r " + launchDst.getParent().toUri().getPath() + " /root ");
         pout.println("echo "+ dockerPidScript +" > " + pidFile.toString() + ".tmp");
         pout.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
-        pout.println("chown 999 " + launchDst.toUri().getPath().toString() + " && " + dockerCommand + " bash \"" +
-          launchDst.toUri().getPath().toString() + "\"");
+        pout.println(dockerCommand + " bash " +
+          launchDst.toUri().getPath().toString());
 
         if (LOG.isDebugEnabled()) {
           ps.println("#!/usr/bin/env bash");
           ps.println();
-          ps.println("chown jetty " + launchDst.toUri().getPath().toString());
           ps.println("cp -r " + launchDst.getParent().toUri().getPath() + " /root ");
           ps.println("/bin/mv -f " + pidFile.toString() + ".tmp " + pidFile);
           ps.println(dockerCommand + " bash \"" +
@@ -620,146 +591,146 @@ private long getUid(String userName) throws IOException, InterruptedException {
     }
   }
 
-  protected void createDir(Path dirPath, FsPermission perms,
-                           boolean createParent, String user) throws IOException {
-    lfs.mkdir(dirPath, perms, createParent);
-    if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
-      lfs.setPermission(dirPath, perms);
-    }
-  }
+//  protected void createDir(Path dirPath, FsPermission perms,
+//                           boolean createParent, String user) throws IOException {
+//    lfs.mkdir(dirPath, perms, createParent);
+//    if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
+//      lfs.setPermission(dirPath, perms);
+//    }
+//  }
 
-  /**
-   * Initialize the local directories for a particular user.
-   * <ul>.mkdir
-   * <li>$local.dir/usercache/$user</li>
-   * </ul>
-   */
-  void createUserLocalDirs(List<String> localDirs, String user)
-      throws IOException {
-    boolean userDirStatus = false;
-    FsPermission userperms = new FsPermission(USER_PERM);
-    for (String localDir : localDirs) {
-      // create $local.dir/usercache/$user and its immediate parent
-      try {
-        createDir(getUserCacheDir(new Path(localDir), user), userperms, true, user);
-      } catch (IOException e) {
-        LOG.warn("Unable to create the user directory : " + localDir, e);
-        continue;
-      }
-      userDirStatus = true;
-    }
-    if (!userDirStatus) {
-      throw new IOException("Not able to initialize user directories "
-          + "in any of the configured local directories for user " + user);
-    }
-  }
-
-
-  /**
-   * Initialize the local cache directories for a particular user.
-   * <ul>
-   * <li>$local.dir/usercache/$user</li>
-   * <li>$local.dir/usercache/$user/appcache</li>
-   * <li>$local.dir/usercache/$user/filecache</li>
-   * </ul>
-   */
-  void createUserCacheDirs(List<String> localDirs, String user)
-    throws IOException {
-    LOG.info("Initializing user " + user);
-
-    boolean appcacheDirStatus = false;
-    boolean distributedCacheDirStatus = false;
-    FsPermission appCachePerms = new FsPermission(APPCACHE_PERM);
-    FsPermission fileperms = new FsPermission(FILECACHE_PERM);
-
-    for (String localDir : localDirs) {
-      // create $local.dir/usercache/$user/appcache
-      Path localDirPath = new Path(localDir);
-      final Path appDir = getAppcacheDir(localDirPath, user);
-      try {
-        createDir(appDir, appCachePerms, true, user);
-        appcacheDirStatus = true;
-      } catch (IOException e) {
-        LOG.warn("Unable to create app cache directory : " + appDir, e);
-      }
-      // create $local.dir/usercache/$user/filecache
-      final Path distDir = getFileCacheDir(localDirPath, user);
-      try {
-        createDir(distDir, fileperms, true, user);
-        distributedCacheDirStatus = true;
-      } catch (IOException e) {
-        LOG.warn("Unable to create file cache directory : " + distDir, e);
-      }
-    }
-    if (!appcacheDirStatus) {
-      throw new IOException("Not able to initialize app-cache directories "
-        + "in any of the configured local directories for user " + user);
-    }
-    if (!distributedCacheDirStatus) {
-      throw new IOException(
-        "Not able to initialize distributed-cache directories "
-          + "in any of the configured local directories for user "
-          + user);
-    }
-  }
-
-  /**
-   * Initialize the local directories for a particular user.
-   * <ul>
-   * <li>$local.dir/usercache/$user/appcache/$appid</li>
-   * </ul>
-   * @param localDirs
-   */
-  void createAppDirs(List<String> localDirs, String user, String appId)
-    throws IOException {
-    boolean initAppDirStatus = false;
-    FsPermission appperms = new FsPermission(APPDIR_PERM);
-    for (String localDir : localDirs) {
-      Path fullAppDir = getApplicationDir(new Path(localDir), user, appId);
-      // create $local.dir/usercache/$user/appcache/$appId
-      try {
-        createDir(fullAppDir, appperms, true, user);
-        initAppDirStatus = true;
-      } catch (IOException e) {
-        LOG.warn("Unable to create app directory " + fullAppDir.toString(), e);
-      }
-    }
-    if (!initAppDirStatus) {
-      throw new IOException("Not able to initialize app directories "
-        + "in any of the configured local directories for app "
-        + appId.toString());
-    }
-  }
+//  /**
+//   * Initialize the local directories for a particular user.
+//   * <ul>.mkdir
+//   * <li>$local.dir/usercache/$user</li>
+//   * </ul>
+//   */
+//  void createUserLocalDirs(List<String> localDirs, String user)
+//      throws IOException {
+//    boolean userDirStatus = false;
+//    FsPermission userperms = new FsPermission(USER_PERM);
+//    for (String localDir : localDirs) {
+//      // create $local.dir/usercache/$user and its immediate parent
+//      try {
+//        createDir(getUserCacheDir(new Path(localDir), user), userperms, true, user);
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create the user directory : " + localDir, e);
+//        continue;
+//      }
+//      userDirStatus = true;
+//    }
+//    if (!userDirStatus) {
+//      throw new IOException("Not able to initialize user directories "
+//          + "in any of the configured local directories for user " + user);
+//    }
+//  }
 
 
-  /**
-   * Create application log directories on all disks.
-   */
-  void createContainerLogDirs(String appId, String containerId,
-                              List<String> logDirs, String user) throws IOException {
+//  /**
+//   * Initialize the local cache directories for a particular user.
+//   * <ul>
+//   * <li>$local.dir/usercache/$user</li>
+//   * <li>$local.dir/usercache/$user/appcache</li>
+//   * <li>$local.dir/usercache/$user/filecache</li>
+//   * </ul>
+//   */
+//  void createUserCacheDirs(List<String> localDirs, String user)
+//    throws IOException {
+//    LOG.info("Initializing user " + user);
+//
+//    boolean appcacheDirStatus = false;
+//    boolean distributedCacheDirStatus = false;
+//    FsPermission appCachePerms = new FsPermission(APPCACHE_PERM);
+//    FsPermission fileperms = new FsPermission(FILECACHE_PERM);
+//
+//    for (String localDir : localDirs) {
+//      // create $local.dir/usercache/$user/appcache
+//      Path localDirPath = new Path(localDir);
+//      final Path appDir = getAppcacheDir(localDirPath, user);
+//      try {
+//        createDir(appDir, appCachePerms, true, user);
+//        appcacheDirStatus = true;
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create app cache directory : " + appDir, e);
+//      }
+//      // create $local.dir/usercache/$user/filecache
+//      final Path distDir = getFileCacheDir(localDirPath, user);
+//      try {
+//        createDir(distDir, fileperms, true, user);
+//        distributedCacheDirStatus = true;
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create file cache directory : " + distDir, e);
+//      }
+//    }
+//    if (!appcacheDirStatus) {
+//      throw new IOException("Not able to initialize app-cache directories "
+//        + "in any of the configured local directories for user " + user);
+//    }
+//    if (!distributedCacheDirStatus) {
+//      throw new IOException(
+//        "Not able to initialize distributed-cache directories "
+//          + "in any of the configured local directories for user "
+//          + user);
+//    }
+//  }
 
-    boolean containerLogDirStatus = false;
-    FsPermission containerLogDirPerms = new FsPermission(LOGDIR_PERM);
-    for (String rootLogDir : logDirs) {
-      // create $log.dir/$appid/$containerid
-      Path appLogDir = new Path(rootLogDir, appId);
-      Path containerLogDir = new Path(appLogDir, containerId);
-      try {
-        createDir(containerLogDir, containerLogDirPerms, true, user);
-      } catch (IOException e) {
-        LOG.warn("Unable to create the container-log directory : "
-          + appLogDir, e);
-        continue;
-      }
-      containerLogDirStatus = true;
-    }
-    if (!containerLogDirStatus) {
-      throw new IOException(
-        "Not able to initialize container-log directories "
-          + "in any of the configured local directories for container "
-          + containerId);
-    }
-  }
+//  /**
+//   * Initialize the local directories for a particular user.
+//   * <ul>
+//   * <li>$local.dir/usercache/$user/appcache/$appid</li>
+//   * </ul>
+//   * @param localDirs
+//   */
+//  void createAppDirs(List<String> localDirs, String user, String appId)
+//    throws IOException {
+//    boolean initAppDirStatus = false;
+//    FsPermission appperms = new FsPermission(APPDIR_PERM);
+//    for (String localDir : localDirs) {
+//      Path fullAppDir = getApplicationDir(new Path(localDir), user, appId);
+//      // create $local.dir/usercache/$user/appcache/$appId
+//      try {
+//        createDir(fullAppDir, appperms, true, user);
+//        initAppDirStatus = true;
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create app directory " + fullAppDir.toString(), e);
+//      }
+//    }
+//    if (!initAppDirStatus) {
+//      throw new IOException("Not able to initialize app directories "
+//        + "in any of the configured local directories for app "
+//        + appId.toString());
+//    }
+//  }
+
+
+//  /**
+//   * Create application log directories on all disks.
+//   */
+//  void createContainerLogDirs(String appId, String containerId,
+//                              List<String> logDirs, String user) throws IOException {
+//
+//    boolean containerLogDirStatus = false;
+//    FsPermission containerLogDirPerms = new FsPermission(LOGDIR_PERM);
+//    for (String rootLogDir : logDirs) {
+//      // create $log.dir/$appid/$containerid
+//      Path appLogDir = new Path(rootLogDir, appId);
+//      Path containerLogDir = new Path(appLogDir, containerId);
+//      try {
+//        createDir(containerLogDir, containerLogDirPerms, true, user);
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create the container-log directory : "
+//          + appLogDir, e);
+//        continue;
+//      }
+//      containerLogDirStatus = true;
+//    }
+//    if (!containerLogDirStatus) {
+//      throw new IOException(
+//        "Not able to initialize container-log directories "
+//          + "in any of the configured local directories for container "
+//          + containerId);
+//    }
+//  }
 
   /**
    * Permissions for user dir.
@@ -858,30 +829,30 @@ private long getUid(String userName) throws IOException, InterruptedException {
     return appStorageDir;
   }
 
-  /**
-   * Create application log directories on all disks.
-   */
-  void createAppLogDirs(String appId, List<String> logDirs, String user)
-    throws IOException {
-
-    boolean appLogDirStatus = false;
-    FsPermission appLogDirPerms = new FsPermission(LOGDIR_PERM);
-    for (String rootLogDir : logDirs) {
-      // create $log.dir/$appid
-      Path appLogDir = new Path(rootLogDir, appId);
-      try {
-        createDir(appLogDir, appLogDirPerms, true, user);
-      } catch (IOException e) {
-        LOG.warn("Unable to create the app-log directory : " + appLogDir, e);
-        continue;
-      }
-      appLogDirStatus = true;
-    }
-    if (!appLogDirStatus) {
-      throw new IOException("Not able to initialize app-log directories "
-        + "in any of the configured local directories for app " + appId);
-    }
-  }
+//  /**
+//   * Create application log directories on all disks.
+//   */
+//  void createAppLogDirs(String appId, List<String> logDirs, String user)
+//    throws IOException {
+//
+//    boolean appLogDirStatus = false;
+//    FsPermission appLogDirPerms = new FsPermission(LOGDIR_PERM);
+//    for (String rootLogDir : logDirs) {
+//      // create $log.dir/$appid
+//      Path appLogDir = new Path(rootLogDir, appId);
+//      try {
+//        createDir(appLogDir, appLogDirPerms, true, user);
+//      } catch (IOException e) {
+//        LOG.warn("Unable to create the app-log directory : " + appLogDir, e);
+//        continue;
+//      }
+//      appLogDirStatus = true;
+//    }
+//    if (!appLogDirStatus) {
+//      throw new IOException("Not able to initialize app-log directories "
+//        + "in any of the configured local directories for app " + appId);
+//    }
+//  }
 
   /**
    * @return the list of paths of given local directories

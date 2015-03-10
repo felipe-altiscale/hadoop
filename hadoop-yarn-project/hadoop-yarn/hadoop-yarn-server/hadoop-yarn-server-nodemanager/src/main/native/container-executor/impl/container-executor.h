@@ -121,7 +121,8 @@ int initialize_app(const char *user, const char *app_id,
 int create_local_and_log_dirs(const char *user,const char *app_id,
                                   const char *container_id,const char *work_dir,
                                   const char *script_name, const char *cred_file,
-                                  char* const* local_dirs,char* const* log_dirs);
+                                  char* const* local_dirs,char* const* log_dirs,
+                                  char* const* args);
 /*
  * Function used to launch a container as the provided user. It does the following :
  * 1) Creates container work dir and log dir to be accessible by the child
