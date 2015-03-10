@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
                                extract_values(log_dirs), argv + optind);
     break;
   case CREATE_CONTAINER_DIRS:
-    if (argc != 11) {
+    if (argc < 11) {
       fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create container directories\n",
           argc);
       fflush(ERRORFILE);
@@ -234,7 +234,7 @@ int main(int argc, char **argv) {
     exit_code = create_local_and_log_dirs(yarn_user_name, app_id,
                                container_id, current_dir, script_file, cred_file,
                                extract_values(local_dirs),
-                               extract_values(log_dirs));
+                               extract_values(log_dirs), argv + optind);
     break;
   case LAUNCH_CONTAINER:
     if (argc != 13) {
