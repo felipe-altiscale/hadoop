@@ -931,12 +931,12 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "docker-container-executor.image-name";
 
   /** The name of the docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-    NM_PREFIX + "docker-container-executor.exec-name";
+  public static final String NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
+    NM_PREFIX + "docker-container-executor.docker-url";
 
   /** The default docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-          "/usr/bin/docker";
+  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
+          "tcp://localhost:4243";
   /**
    * True if linux-container-executor should limit itself to one user
    * when running in non-secure mode.

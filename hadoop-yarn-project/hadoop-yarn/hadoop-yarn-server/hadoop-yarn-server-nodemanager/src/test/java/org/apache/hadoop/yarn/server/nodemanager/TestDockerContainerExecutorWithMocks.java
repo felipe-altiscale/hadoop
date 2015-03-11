@@ -81,7 +81,7 @@ public class TestDockerContainerExecutorWithMocks {
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
     conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME , DOCKER_LAUNCH_COMMAND);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, DOCKER_LAUNCH_COMMAND);
     dockerContainerExecutor = new DockerContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
