@@ -54,12 +54,48 @@ import static org.mockito.Mockito.when;
  * This is intended to test the DockerContainerExecutor code, but it requires docker
  * to be installed.
  * <br><ol>
- * <li>Install docker, and Compile the code with docker-service-url set to the host and port
- * where docker service is running.
+ * <li>Compile the code with container-executor.conf.dir set to the location you
+ * want for testing.
  * <br><pre><code>
- * > mvn clean install -Ddocker-service-url=tcp://0.0.0.0:4243
+ * > mvn clean install -Pnative -Dcontainer-executor.conf.dir=/etc/hadoop
  *                          -DskipTests
  * </code></pre>
+ *
+ * <li>Set up <code>${container-executor.conf.dir}/container-executor.cfg</code>
+ * container-executor.cfg needs to be owned by root and have in it the proper
+ * config values.
+ * <br><pre><code>
+ * > cat /etc/hadoop/container-executor.cfg
+ * yarn.nodemanager.linux-container-executor.group=yarn
+ * #depending on the user id of the application.submitter option
+ * min.user.id=1
+ * > sudo chown root:root /etc/hadoop/container-executor.cfg
+ * > sudo chmod 444 /etc/hadoop/container-executor.cfg
+ * </code></pre>
+ *
+ * <li>Move the binary and set proper permissions on it. It needs to be owned
+ * by root, the group needs to be the group configured in container-executor.cfg,
+ * and it needs the setuid bit set. (The build will also overwrite it so you
+ * need to move it to a place that you can support it.
+ * <br><pre><code>
+ * > cp ./hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
+ * > sudo chown root:mapred /tmp/container-executor
+ * > sudo chmod 4550 /tmp/container-executor
+ * </code></pre>
+ *
+ * <li>Run the tests with the execution enabled (The user you run the tests as
+ * needs to be part of the group from the config.
+ * <br><pre><code>
+ * mvn test -Dtest=TestLinuxContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor
+ * </code></pre>
+
+ * <li>Install docker, and Compile the code with docker-service-url set to the host and port
+ * where docker service is running. Additionally provide a user
+ * <br><pre><code>
+ * > mvn clean install -Ddocker-service-url=tcp://0.0.0.0:4243
+ *
+ * </code></pre>
+ * </ol>
  */
 public class TestDockerContainerExecutor {
   private static final Log LOG = LogFactory
@@ -74,10 +110,7 @@ public class TestDockerContainerExecutor {
   private int id = 0;
   private String appSubmitter;
   private String dockerUrl;
-  private String testImage = "jetty";
-  private String dockerExec;
-  private String containerIdStr;
-
+  private String testImage = "centos";
 
   private ContainerId getNextContainerId() {
     ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
@@ -108,9 +141,9 @@ public class TestDockerContainerExecutor {
       return;
     }
     dockerUrl = " -H " + dockerUrl;
-    dockerExec = "docker " + dockerUrl;
+
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerExec);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerUrl);
     exec = new DockerContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
@@ -119,7 +152,7 @@ public class TestDockerContainerExecutor {
     if (appSubmitter == null || appSubmitter.isEmpty()) {
       appSubmitter = "jetty";
     }
-    shellExec(dockerExec + " pull " + testImage);
+    shellExec("docker" + dockerUrl + " pull " + testImage);
 
   }
 
