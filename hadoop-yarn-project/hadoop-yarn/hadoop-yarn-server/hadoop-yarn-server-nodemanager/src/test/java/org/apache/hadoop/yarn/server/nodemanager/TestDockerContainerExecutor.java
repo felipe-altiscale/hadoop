@@ -110,7 +110,7 @@ public class TestDockerContainerExecutor {
     dockerUrl = " -H " + dockerUrl;
     dockerExec = "docker " + dockerUrl;
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME, dockerExec);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerExec);
     exec = new DockerContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);

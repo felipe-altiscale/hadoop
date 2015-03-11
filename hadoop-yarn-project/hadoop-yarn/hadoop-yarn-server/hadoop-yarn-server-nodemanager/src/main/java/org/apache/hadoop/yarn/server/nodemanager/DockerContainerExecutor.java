@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
-import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -39,14 +38,10 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -91,14 +86,13 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     if (auth != null && !auth.equals("simple")) {
       throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
     }
-    String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
-      YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
-    String[] arr = dockerExecutor.split("\\s");
+    String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
+      YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("dockerExecutor: " + dockerExecutor);
+      LOG.debug("dockerUrl: " + dockerUrl);
     }
-    if (!new File(arr[0]).exists()) {
-      throw new IllegalStateException("Invalid docker exec path: " + dockerExecutor);
+    if (Strings.isNullOrEmpty(dockerUrl)) {
+      throw new IllegalStateException("DockerUrl must be configured");
     }
  }
 
@@ -117,8 +111,8 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     containerImageName = containerImageName.replaceAll("['\"]", "");
 
     Preconditions.checkArgument(saneDockerImage(containerImageName), "Image: " + containerImageName + " is not a proper docker image");
-    String dockerExecutor = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME,
-        YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME);
+    String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
+        YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
 
     ContainerId containerId = container.getContainerId();
 
@@ -129,17 +123,10 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
-    long uid = -1l;
-    try {
-      uid = getUid(userName);
-    } catch (InterruptedException e) {
-      throw new RuntimeException("Cannot find uid for user: " + userName);
-    }
 
-    String[] arr = dockerExecutor.split("\\s");
     String[] localMounts = localDirMount.trim().split("\\s+");
     String[] logMounts = logDirMount.trim().split("\\s+");
-    List<String> commandStr = Lists.newArrayList("docker", arr[1], "run", "--net",
+    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "run", "--net",
             "host", "--name", containerIdStr, "--user", userName, "--workdir",
             containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
     commandStr.addAll(Arrays.asList(localMounts));
@@ -211,38 +198,6 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     }
     return 0;
   }
-
-private long getUid(String userName) throws IOException, InterruptedException {
-  long uid = -1l;
-  String findUid = "id -u " + userName;
-  ProcessBuilder processBuilder = new ProcessBuilder(findUid.split(" "));
-
-  Process process = processBuilder.start();
-  final BufferedReader errReader =
-          new BufferedReader(new InputStreamReader(
-                  process.getErrorStream(), Charset.defaultCharset()));
-  final StringBuffer errMsg = new StringBuffer();
-  String err = errReader.readLine();
-  while (err != null) {
-    errMsg.append(err);
-    errMsg.append(System.getProperty("line.separator"));
-    err = errReader.readLine();
-  }
-  try(BufferedReader inReader =
-              new BufferedReader(new InputStreamReader(
-                      process.getInputStream(), Charset.defaultCharset()))) {
-    String line = inReader.readLine();
-
-    int exitCode = process.waitFor();
-
-    if (exitCode != 0) {
-      throw new Shell.ExitCodeException(exitCode, "Error: " + findUid + " error msg: " + errMsg);
-    }
-
-    uid = Long.parseLong(line);
-  }
-  return uid;
-}
 
 @Override
   public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
