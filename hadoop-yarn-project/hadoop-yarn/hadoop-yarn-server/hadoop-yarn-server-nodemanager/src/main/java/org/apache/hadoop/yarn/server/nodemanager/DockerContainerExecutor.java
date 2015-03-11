@@ -248,7 +248,7 @@ public void buildMainArgs(List<String> command, String user, String appId,
       List<String> createDirCommand = new ArrayList<String>();
       createDirCommand.addAll(Arrays.asList(
               containerExecutorExe, userName, userName, Integer
-                      .toString(Commands.CREATE_CONTAINER_DIRS.getValue()), appId,
+                      .toString(Commands.LAUNCH_DOCKER_CONTAINER.getValue()), appId,
               containerIdStr, containerWorkDir.toString(),
               nmPrivateContainerScriptPath.toUri().getPath().toString(),
               nmPrivateTokensPath.toUri().getPath().toString(),
