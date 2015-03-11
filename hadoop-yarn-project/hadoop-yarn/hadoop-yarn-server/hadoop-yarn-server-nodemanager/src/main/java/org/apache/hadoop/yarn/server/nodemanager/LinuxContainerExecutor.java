@@ -53,7 +53,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
-  private String containerExecutorExe;
+  protected String containerExecutorExe;
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
@@ -87,6 +87,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (!containerLimitUsers) {
       LOG.warn(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS +
           ": impersonation without authentication enabled");
+    } else {
+      LOG.debug("AAAA we are not impersonating!!!");
     }
   }
 
