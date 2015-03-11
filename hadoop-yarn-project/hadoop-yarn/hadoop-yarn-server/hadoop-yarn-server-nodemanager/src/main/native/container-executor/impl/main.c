@@ -54,9 +54,9 @@ void display_usage(FILE *stream) {
   fprintf(stream, "   initialize container: %2d appid tokens " \
    "nm-local-dirs nm-log-dirs cmd app...\n", INITIALIZE_CONTAINER);
    fprintf(stream,
-         "   launch container:    %2d appid containerid workdir "\
-         "container-script tokens nm-local-dirs nm-log-dirs \n",
-   	  CREATE_CONTAINER_DIRS);
+         "   launch docker container:    %2d appid containerid workdir "\
+         "container-script tokens nm-local-dirs nm-log-dirs cmd app...\n",
+   	  LAUNCH_DOCKER_CONTAINER);
   fprintf(stream,
       "   launch container:    %2d appid containerid workdir "\
       "container-script tokens pidfile nm-local-dirs nm-log-dirs resources\n",
@@ -217,9 +217,9 @@ int main(int argc, char **argv) {
                                extract_values(local_dirs),
                                extract_values(log_dirs), argv + optind);
     break;
-  case CREATE_CONTAINER_DIRS:
+  case LAUNCH_DOCKER_CONTAINER:
     if (argc < 11) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create container directories\n",
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create launch docker container\n",
           argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
     cred_file = argv[optind++];
     local_dirs = argv[optind++];// good local dirs as a comma separated list
     log_dirs = argv[optind++];// good log dirs as a comma separated list
-    exit_code = create_local_and_log_dirs(yarn_user_name, app_id,
+    exit_code = launch_docker_container_as_user(yarn_user_name, app_id,
                                container_id, current_dir, script_file, cred_file,
                                extract_values(local_dirs),
                                extract_values(log_dirs), argv + optind);

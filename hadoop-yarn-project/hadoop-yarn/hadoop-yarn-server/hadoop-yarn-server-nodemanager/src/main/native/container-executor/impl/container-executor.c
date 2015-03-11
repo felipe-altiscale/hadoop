@@ -1005,7 +1005,7 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-int create_local_and_log_dirs(const char *user,const char *app_id,
+int launch_docker_container_as_user(const char *user,const char *app_id,
                               const char *container_id,const char *work_dir,
                               const char *script_name, const char *cred_file,
                               char* const* local_dirs,char* const* log_dirs,
@@ -1031,39 +1031,33 @@ int create_local_and_log_dirs(const char *user,const char *app_id,
     exit_code = OUT_OF_MEMORY;
     goto cleanup;
   }
-  fprintf(LOGFILE, "cred_file_dest \n");
   // open launch script
   int container_file_source = open_file_as_nm(script_name);
   if (container_file_source == -1) {
     exit_code = INVALID_NM_ROOT_DIRS;
     goto cleanup;
   }
-  fprintf(LOGFILE, "container_file_source \n");
   // open credentials
   int cred_file_source = open_file_as_nm(cred_file);
   if (cred_file_source == -1) {
     exit_code = INVALID_ARGUMENT_NUMBER;
     goto cleanup;
   }
-  fprintf(LOGFILE, "cred_file_source \n");
  // create the user directory on all disks
   int result = initialize_user(user, local_dirs);
   if (result != 0) {
     return result;
   }
-  fprintf(LOGFILE, "result \n");
   // initializing log dirs
   int log_create_result = create_log_dirs(app_id, log_dirs);
   if (log_create_result != 0) {
     return log_create_result;
   }
-  fprintf(LOGFILE, "log_create_result \n");
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
     exit_code = SETUID_OPER_FAILED;
     goto cleanup;
   }
-  fprintf(LOGFILE, "changed user \n");
   // Create container specific directories as user. If there are no resources
   // to localize for this container, app-directories and log-directories are
   // also created automatically as part of this call.
@@ -1072,54 +1066,42 @@ int create_local_and_log_dirs(const char *user,const char *app_id,
     fprintf(LOGFILE, "Could not create container dirs");
     goto cleanup;
   }
-  fprintf(LOGFILE, "created container_dirs\n");
 
   // 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
     exit_code = INVALID_COMMAND_PROVIDED;
     goto cleanup;
   }
-  fprintf(LOGFILE, "copied \n");
   // 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
-   fprintf(LOGFILE, "copied \n");
-//#if HAVE_FCLOSEALL
-//  fcloseall();
-//#else
-//  // only those fds are opened assuming no bug
-//  fclose(ERRORFILE);
-//  fclose(stdin);
-//#endif
-//
-//  fclose(stdin);
-//  fflush(LOGFILE);
-//  if (LOGFILE != stdout) {
-//    fclose(stdout);
-//  }
-//  if (ERRORFILE != stderr) {
-//    fclose(stderr);
-//  }
+#if HAVE_FCLOSEALL
+  fcloseall();
+#else
+  // only those fds are opened assuming no bug
+  fclose(LOGFILE);
+  fclose(ERRORFILE);
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
 if (chdir(work_dir) != 0) {
     fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
 	    strerror(errno));
     goto cleanup;
   }
-      fprintf(LOGFILE, "Changed directory to %s\n", work_dir);
   if (execvp(args[0], args) != 0) {
     fprintf(LOGFILE, "Couldn't execute the container launch with args %s - %s",
             args[0], strerror(errno));
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
-  } else {
-  fprintf(LOGFILE, "Launched docker container \n");
   }
  exit_code = 0;
 cleanup:
-//  free(exit_code_file);
+  free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
   return exit_code;

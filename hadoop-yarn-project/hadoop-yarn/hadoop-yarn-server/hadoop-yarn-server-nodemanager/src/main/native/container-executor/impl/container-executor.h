@@ -25,7 +25,7 @@ enum command {
   LAUNCH_CONTAINER = 1,
   SIGNAL_CONTAINER = 2,
   DELETE_AS_USER = 3,
-  CREATE_CONTAINER_DIRS = 4
+  LAUNCH_DOCKER_CONTAINER = 4
 };
 
 enum errorcodes {
@@ -98,7 +98,7 @@ int initialize_app(const char *user, const char *app_id,
                    char* const* log_dirs, char* const* args);
 
 /*
- * Function used to launch a container as the provided user. It does the following :
+ * Function used to launch a docker container as the provided user. It does the following :
  * 1) Creates container work dir and log dir to be accessible by the child
  * 2) Copies the script file from the NM to the work directory
  * 3) Sets up the environment
@@ -118,7 +118,7 @@ int initialize_app(const char *user, const char *app_id,
  * @param resources_value values needed to apply resource enforcement
  * @return -1 or errorcode enum value on error (should never return on success).
  */
-int create_local_and_log_dirs(const char *user,const char *app_id,
+int launch_docker_container_as_user(const char *user,const char *app_id,
                                   const char *container_id,const char *work_dir,
                                   const char *script_name, const char *cred_file,
                                   char* const* local_dirs,char* const* log_dirs,
