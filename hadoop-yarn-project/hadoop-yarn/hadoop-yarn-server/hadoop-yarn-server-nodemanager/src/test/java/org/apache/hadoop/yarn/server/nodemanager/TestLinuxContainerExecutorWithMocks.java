@@ -18,14 +18,23 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import java.io.File;
 import java.io.FileReader;
@@ -38,23 +47,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
-import org.junit.Assert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 public class TestLinuxContainerExecutorWithMocks {
 
@@ -109,7 +109,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testContainerLaunch() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        ContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
+        LinuxContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
     Container container = mock(Container.class);
@@ -241,7 +241,7 @@ public class TestLinuxContainerExecutorWithMocks {
 
     String appSubmitter = "nobody";
     String cmd = String
-        .valueOf(ContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
+        .valueOf(LinuxContainerExecutor.Commands.LAUNCH_CONTAINER.getValue());
     String appId = "APP_ID";
     String containerId = "CONTAINER_ID";
     Container container = mock(Container.class);
@@ -303,7 +303,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testContainerKill() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        ContainerExecutor.Commands.SIGNAL_CONTAINER.getValue());
+        LinuxContainerExecutor.Commands.SIGNAL_CONTAINER.getValue());
     ContainerExecutor.Signal signal = ContainerExecutor.Signal.QUIT;
     String sigVal = String.valueOf(signal.getValue());
     
@@ -317,7 +317,7 @@ public class TestLinuxContainerExecutorWithMocks {
   public void testDeleteAsUser() throws IOException {
     String appSubmitter = "nobody";
     String cmd = String.valueOf(
-        ContainerExecutor.Commands.DELETE_AS_USER.getValue());
+        LinuxContainerExecutor.Commands.DELETE_AS_USER.getValue());
     Path dir = new Path("/tmp/testdir");
     Path testFile = new Path("testfile");
     Path baseDir0 = new Path("/grid/0/BaseDir");

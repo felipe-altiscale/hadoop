@@ -18,24 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
-import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -50,6 +32,23 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.util.ProcessIdFileReader;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 
 public abstract class ContainerExecutor implements Configurable {
 
@@ -76,18 +75,7 @@ public abstract class ContainerExecutor implements Configurable {
     return conf;
   }
 
-protected String getContainerExecutorExecutablePath(Configuration conf) {
-  String yarnHomeEnvVar =
-      System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
-  File hadoopBin = new File(yarnHomeEnvVar, "bin");
-  String defaultPath =
-    new File(hadoopBin, "container-executor").getAbsolutePath();
-  return null == conf
-    ? defaultPath
-    : conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
-}
-
-/**
+  /**
    * Run the executor initialization steps. 
    * Verify that the necessary configs, permissions are in place.
    * @throws IOException
@@ -459,48 +447,7 @@ protected String getContainerExecutorExecutablePath(Configuration conf) {
     return pid;
   }
 
-/**
- * List of commands that the setuid script will execute.
- */
-enum Commands {
-  INITIALIZE_CONTAINER(0),
-  LAUNCH_CONTAINER(1),
-  SIGNAL_CONTAINER(2),
-  DELETE_AS_USER(3),
-  LAUNCH_DOCKER_CONTAINER(4);
-
-  private int value;
-  Commands(int value) {
-    this.value = value;
-  }
-  int getValue() {
-    return value;
-  }
-}
-
-/**
- * Result codes returned from the C container-executor.
- * These must match the values in container-executor.h.
- */
-enum ResultCode {
-  OK(0),
-  INVALID_USER_NAME(2),
-  UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
-  INVALID_CONTAINER_PID(9),
-  INVALID_CONTAINER_EXEC_PERMISSIONS(22),
-  INVALID_CONFIG_FILE(24),
-  WRITE_CGROUP_FAILED(27);
-
-  private final int value;
-  ResultCode(int value) {
-    this.value = value;
-  }
-  int getValue() {
-    return value;
-  }
-}
-
-public static class DelayedProcessKiller extends Thread {
+  public static class DelayedProcessKiller extends Thread {
     private Container container;
     private final String user;
     private final String pid;

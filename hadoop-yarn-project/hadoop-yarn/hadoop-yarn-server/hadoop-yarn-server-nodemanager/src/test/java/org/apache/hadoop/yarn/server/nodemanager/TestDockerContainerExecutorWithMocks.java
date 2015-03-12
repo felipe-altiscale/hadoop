@@ -215,7 +215,7 @@ public class TestDockerContainerExecutorWithMocks {
     List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
     List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
     List<String> expectedParams =  new ArrayList<String>(
-        Arrays.asList(appSubmitter, appSubmitter, ContainerExecutor.Commands.LAUNCH_DOCKER_CONTAINER.getValue() + "",
+        Arrays.asList(appSubmitter, appSubmitter, LinuxContainerExecutor.Commands.LAUNCH_DOCKER_CONTAINER.getValue() + "",
                 appId, containerId, workDir.toUri().getPath(), scriptPath.toUri().getPath(),
                 tokensPath.toUri().getPath()));
     expectedParams.addAll(dirsHandler.getLocalDirs());
