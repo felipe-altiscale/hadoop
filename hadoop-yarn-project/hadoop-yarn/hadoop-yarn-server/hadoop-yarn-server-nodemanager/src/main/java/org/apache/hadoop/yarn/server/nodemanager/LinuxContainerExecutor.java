@@ -20,6 +20,15 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -29,6 +38,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -37,14 +47,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.Cont
 import org.apache.hadoop.yarn.server.nodemanager.util.DefaultLCEResourcesHandler;
 import org.apache.hadoop.yarn.server.nodemanager.util.LCEResourcesHandler;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.regex.Pattern;
 
 public class LinuxContainerExecutor extends ContainerExecutor {
 
@@ -86,9 +88,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LIMIT_USERS);
     if (!containerLimitUsers) {
       LOG.warn(YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS +
-          ": impersonation without authentication enabled");
-    } else {
-      LOG.debug("AAAA we are not impersonating!!!");
+              ": impersonation without authentication enabled");
     }
   }
 
@@ -109,7 +109,59 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     }
   }
 
-protected void addSchedPriorityCommand(List<String> command) {
+  /**
+   * List of commands that the setuid script will execute.
+   */
+  enum Commands {
+    INITIALIZE_CONTAINER(0),
+    LAUNCH_CONTAINER(1),
+    SIGNAL_CONTAINER(2),
+    DELETE_AS_USER(3),
+    LAUNCH_DOCKER_CONTAINER(4);
+
+    private int value;
+    Commands(int value) {
+      this.value = value;
+    }
+    int getValue() {
+      return value;
+    }
+  }
+
+  /**
+   * Result codes returned from the C container-executor.
+   * These must match the values in container-executor.h.
+   */
+  enum ResultCode {
+    OK(0),
+    INVALID_USER_NAME(2),
+    UNABLE_TO_EXECUTE_CONTAINER_SCRIPT(7),
+    INVALID_CONTAINER_PID(9),
+    INVALID_CONTAINER_EXEC_PERMISSIONS(22),
+    INVALID_CONFIG_FILE(24),
+    WRITE_CGROUP_FAILED(27);
+
+    private final int value;
+    ResultCode(int value) {
+      this.value = value;
+    }
+    int getValue() {
+      return value;
+    }
+  }
+
+  protected String getContainerExecutorExecutablePath(Configuration conf) {
+    String yarnHomeEnvVar =
+        System.getenv(ApplicationConstants.Environment.HADOOP_YARN_HOME.key());
+    File hadoopBin = new File(yarnHomeEnvVar, "bin");
+    String defaultPath =
+      new File(hadoopBin, "container-executor").getAbsolutePath();
+    return null == conf
+      ? defaultPath
+      : conf.get(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, defaultPath);
+  }
+
+  protected void addSchedPriorityCommand(List<String> command) {
     if (containerSchedPriorityIsSet) {
       command.addAll(Arrays.asList("nice", "-n",
           Integer.toString(containerSchedPriorityAdjustment)));
@@ -409,5 +461,5 @@ protected void addSchedPriorityCommand(List<String> command) {
         throw new IOException("Problem mounting cgroups " + cgroupKVs + 
           "; exit code = " + ret_code + " and output: " + shExec.getOutput(), e);
     }
-  }  
+  }
 }
