@@ -57,9 +57,6 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
   private static final Log LOG = LogFactory
       .getLog(DockerContainerExecutor.class);
-  public static final String DOCKER_CONTAINER_EXECUTOR_SCRIPT = "docker_container_executor";
-  public static final String DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT = "docker_container_executor_session";
-
   // This validates that the image is a proper docker image and would not crash docker.
   public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
 
@@ -126,8 +123,8 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
     String[] localMounts = localDirMount.trim().split("\\s+");
     String[] logMounts = logDirMount.trim().split("\\s+");
-    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "run", "--net",
-            "host", "--name", containerIdStr, "--user", userName, "--workdir",
+    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "run", "--rm",
+            "--net", "host", "--name", containerIdStr, "--user", userName, "--workdir",
             containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
     commandStr.addAll(Arrays.asList(localMounts));
     commandStr.addAll(Arrays.asList(logMounts));
