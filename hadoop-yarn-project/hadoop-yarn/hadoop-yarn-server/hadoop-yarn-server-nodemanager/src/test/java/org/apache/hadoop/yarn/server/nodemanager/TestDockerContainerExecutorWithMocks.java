@@ -41,12 +41,11 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
@@ -59,8 +58,9 @@ public class TestDockerContainerExecutorWithMocks {
 
   private static final Log LOG = LogFactory
       .getLog(TestDockerContainerExecutorWithMocks.class);
-  public static final String DOCKER_LAUNCH_COMMAND = "/bin/true";
+  public static final String DOCKER_URL = "localhost:4243";
   private DockerContainerExecutor dockerContainerExecutor = null;
+  private final File mockParamFile = new File("./params.txt");
   private LocalDirsHandlerService dirsHandler;
   private Path workDir;
   private FileContext lfs;
@@ -81,7 +81,7 @@ public class TestDockerContainerExecutorWithMocks {
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
     conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
     conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, DOCKER_LAUNCH_COMMAND);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, DOCKER_URL);
     dockerContainerExecutor = new DockerContainerExecutor();
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
@@ -103,6 +103,7 @@ public class TestDockerContainerExecutorWithMocks {
       if (lfs != null) {
         lfs.delete(workDir, true);
       }
+      deleteMockParamFile();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -209,45 +210,43 @@ public class TestDockerContainerExecutorWithMocks {
         dirsHandler.getLogDirs());
     assertEquals(0, ret);
     //get the script
-    Path sessionScriptPath = new Path(workDir,
-        Shell.appendScriptExtension(
-            DockerContainerExecutor.DOCKER_CONTAINER_EXECUTOR_SESSION_SCRIPT));
-    LineNumberReader lnr = new LineNumberReader(new FileReader(sessionScriptPath.toString()));
+
     boolean cmdFound = false;
     List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
     List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
-    List<String> workDirMount = dirsToMount(Collections.singletonList(workDir.toUri().getPath()));
-    List<String> expectedCommands =  new ArrayList<String>(
-        Arrays.asList(DOCKER_LAUNCH_COMMAND, "run", "--rm", "--net=host",  "--name",
-                containerId, "--user", "nobody"));
-    expectedCommands.addAll(localDirs);
-    expectedCommands.addAll(logDirs);
-    expectedCommands.addAll(workDirMount);
+    List<String> expectedParams =  new ArrayList<String>(
+        Arrays.asList(appSubmitter, appSubmitter, ContainerExecutor.Commands.LAUNCH_DOCKER_CONTAINER.getValue() + "",
+                appId, containerId, workDir.toUri().getPath(), scriptPath.toUri().getPath(),
+                tokensPath.toUri().getPath()));
+    expectedParams.addAll(dirsHandler.getLocalDirs());
+    expectedParams.addAll(dirsHandler.getLogDirs());
+    expectedParams.addAll(Arrays.asList(
+            "docker", "-H", DOCKER_URL, "run", "--rm", "--net", "host",  "--name",
+                containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
+                "-v", "/etc/passwd:/etc/passwd:ro"));
+    expectedParams.addAll(localDirs);
+    expectedParams.addAll(logDirs);
     String shellScript =  workDir + "/launch_container.sh";
 
-    expectedCommands.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), "bash","\"" + shellScript + "\""));
+    expectedParams.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), "bash", shellScript));
 
-    String expectedPidString = "echo `/bin/true inspect --format {{.State.Pid}} " + containerId+"` > "+ pidFile.toString() + ".tmp";
-    boolean pidSetterFound = false;
-    while(lnr.ready()){
-      String line = lnr.readLine();
-      LOG.debug("line: " + line);
-      if (line.startsWith(DOCKER_LAUNCH_COMMAND)){
-        List<String> command = new ArrayList<String>();
-        for( String s :line.split("\\s+")){
-          command.add(s.trim());
-        }
-
-        assertEquals(expectedCommands, command);
-        cmdFound = true;
-      } else if (line.startsWith("echo")) {
-        assertEquals(expectedPidString, line);
-        pidSetterFound = true;
-      }
-
+    assertEquals(expectedParams, readMockParams());
+  }
+  private List<String> readMockParams() throws IOException {
+    LinkedList<String> ret = new LinkedList<String>();
+    LineNumberReader reader = new LineNumberReader(new FileReader(
+            mockParamFile));
+    String line;
+    while((line = reader.readLine()) != null) {
+      ret.add(line);
     }
-    assertTrue(cmdFound);
-    assertTrue(pidSetterFound);
+    reader.close();
+    return ret;
+  }
+  private void deleteMockParamFile() {
+    if(mockParamFile.exists()) {
+      mockParamFile.delete();
+    }
   }
 
   private List<String> dirsToMount(List<String> dirs) {

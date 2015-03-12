@@ -79,21 +79,16 @@ import static org.mockito.Mockito.when;
  * need to move it to a place that you can support it.
  * <br><pre><code>
  * > cp ./hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
- * > sudo chown root:mapred /tmp/container-executor
+ * > sudo chown root:yarn /tmp/container-executor
  * > sudo chmod 4550 /tmp/container-executor
  * </code></pre>
  *
  * <li>Run the tests with the execution enabled (The user you run the tests as
  * needs to be part of the group from the config.
- * <br><pre><code>
- * mvn test -Dtest=TestLinuxContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor
- * </code></pre>
-
  * <li>Install docker, and Compile the code with docker-service-url set to the host and port
- * where docker service is running. Additionally provide a user
+ * where docker service is running.
  * <br><pre><code>
- * > mvn clean install -Ddocker-service-url=tcp://0.0.0.0:4243
- *
+ * mvn test -Dtest=TestDockerContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor -Ddocker-service-url=tcp://0.0.0.0:4243
  * </code></pre>
  * </ol>
  */
@@ -150,7 +145,7 @@ public class TestDockerContainerExecutor {
     exec.setConf(conf);
     appSubmitter = System.getProperty("application.submitter");
     if (appSubmitter == null || appSubmitter.isEmpty()) {
-      appSubmitter = "jetty";
+      appSubmitter = "nobody";
     }
     shellExec("docker" + dockerUrl + " pull " + testImage);
 
@@ -253,7 +248,7 @@ public class TestDockerContainerExecutor {
     String touchFileName = "touch-file-" + System.currentTimeMillis();
     ContainerId cId = getNextContainerId();
     int ret = runAndBlock(
-        cId, env, "touch", "/tmp/" + touchFileName);
+            cId, env, "touch", "/tmp/" + touchFileName);
 
     assertEquals(0, ret);
   }
