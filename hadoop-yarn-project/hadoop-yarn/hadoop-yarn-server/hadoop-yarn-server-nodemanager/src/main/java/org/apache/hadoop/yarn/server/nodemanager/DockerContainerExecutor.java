@@ -22,6 +22,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
+import com.google.common.eventbus.EventBus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -63,10 +64,12 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
   private final FileContext lfs;
   private final Pattern dockerImagePattern;
+  private final EventBus eventBus;
   public DockerContainerExecutor() {
     try {
       this.lfs = FileContext.getLocalFSFileContext();
       this.dockerImagePattern = Pattern.compile(DOCKER_IMAGE_PATTERN);
+      this.eventBus = new EventBus();
     } catch (UnsupportedFileSystemException e) {
       throw new RuntimeException(e);
     }
@@ -123,7 +126,7 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
     String[] localMounts = localDirMount.trim().split("\\s+");
     String[] logMounts = logDirMount.trim().split("\\s+");
-    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "run", "--rm",
+    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "create",
             "--net", "host", "--name", containerIdStr, "--user", userName, "--workdir",
             containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
     commandStr.addAll(Arrays.asList(localMounts));
@@ -131,35 +134,62 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     commandStr.add(containerImageName.trim());
     commandStr.add("bash");
     commandStr.add(launchDst.toUri().getPath());
-
+    List<String> dockerRmScript = Arrays.asList("docker", "-H", dockerUrl, "rm", containerIdStr);
+    List<String> dockerStartScript = Arrays.asList("docker", "-H", dockerUrl, "start", "-a", containerIdStr);
     ShellCommandExecutor shExec = null;
     try {
       // Setup command to run
       if (LOG.isDebugEnabled()) {
         LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
       }
-
-      List<String> createDirCommand = new ArrayList<String>();
-      createDirCommand.addAll(Arrays.asList(
-              containerExecutorExe, userName, userName, Integer
-                      .toString(Commands.LAUNCH_DOCKER_CONTAINER.getValue()), appId,
+      List<String> containerExecCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
+              .toString(Commands.LAUNCH_DOCKER_CONTAINER.getValue()), appId,
               containerIdStr, containerWorkDir.toString(),
               nmPrivateContainerScriptPath.toUri().getPath().toString(),
               nmPrivateTokensPath.toUri().getPath().toString(),
               StringUtils.join(",", localDirs),
-              StringUtils.join(",", logDirs)));
-      createDirCommand.addAll(commandStr);
-      shExec = new ShellCommandExecutor(createDirCommand.toArray(new String[createDirCommand.size()])
+              StringUtils.join(",", logDirs));
+      List<String> command = new ArrayList<String>();
+      command.addAll(containerExecCommand);
+      command.addAll(commandStr);
+      shExec = new ShellCommandExecutor(command.toArray(new String[command.size()])
               , null, // NM's cwd
               container.getLaunchContext().getEnvironment()); // sanitized env
       if (LOG.isDebugEnabled()) {
-        LOG.debug("createDirCommand: " + createDirCommand);
+        LOG.debug("command: " + command);
       }
    if (isContainerActive(containerId)) {
         shExec.execute();
         if (LOG.isDebugEnabled()) {
           logOutput(shExec.getOutput());
         }
+         String cid = shExec.getOutput();
+         if (cid.length() > 1) {
+           cid = cid.substring(0, cid.length() - 1);
+         }
+         DockerEventSubscriber subscriber = new DockerEventSubscriber(
+                 Joiner.on(" ").join(Lists.newArrayList("docker", "-H", dockerUrl)),
+                 getPidFilePath(containerId),
+                 cid);
+         eventBus.register(subscriber);
+        List<String> containerStartCommand = new ArrayList<>(containerExecCommand);
+        containerStartCommand.addAll(dockerStartScript);
+        shExec = new ShellCommandExecutor(containerStartCommand.toArray(new String[containerStartCommand.size()]),
+                null, // NM's cwd
+                container.getLaunchContext().getEnvironment()); // sanitized env
+        shExec.execute();
+        if (LOG.isDebugEnabled()) {
+          logOutput(shExec.getOutput());
+        }
+     List<String> containerRmCommand = new ArrayList<>(containerExecCommand);
+     containerRmCommand.addAll(dockerRmScript);
+     shExec = new ShellCommandExecutor(containerRmCommand.toArray(new String[containerRmCommand.size()]),
+             null, // NM's cwd
+             container.getLaunchContext().getEnvironment()); // sanitized env
+     shExec.execute();
+     if (LOG.isDebugEnabled()) {
+       logOutput(shExec.getOutput());
+     }
       } else {
         LOG.info("Container " + containerIdStr +
             " was marked as inactive. Returning terminated error");
