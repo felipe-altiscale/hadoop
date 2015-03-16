@@ -1009,12 +1009,13 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
                               const char *container_id,const char *work_dir,
                               const char *script_name, const char *cred_file,
                               char* const* local_dirs,char* const* log_dirs,
+                              int create,
                               char* const* args) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-
+  if(create) {
   script_file_dest = get_container_launcher_file(work_dir);
   if (script_file_dest == NULL) {
     exit_code = OUT_OF_MEMORY;
@@ -1088,6 +1089,7 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   fclose(stdout);
   fclose(stderr);
 #endif
+}
 if (chdir(work_dir) != 0) {
     fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
 	    strerror(errno));

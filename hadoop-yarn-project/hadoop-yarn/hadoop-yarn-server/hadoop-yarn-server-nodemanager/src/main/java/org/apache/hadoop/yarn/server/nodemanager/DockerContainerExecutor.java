@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -56,54 +57,310 @@ import java.util.regex.Pattern;
  */
 public class DockerContainerExecutor extends LinuxContainerExecutor {
 
-  private static final Log LOG = LogFactory
-      .getLog(DockerContainerExecutor.class);
-  // This validates that the image is a proper docker image and would not crash docker.
-  public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
+private static final Log LOG = LogFactory
+        .getLog(DockerContainerExecutor.class);
+// This validates that the image is a proper docker image and would not crash docker.
+public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
 
 
-  private final FileContext lfs;
-  private final Pattern dockerImagePattern;
-  private final EventBus eventBus;
-  public DockerContainerExecutor() {
-    try {
-      this.lfs = FileContext.getLocalFSFileContext();
-      this.dockerImagePattern = Pattern.compile(DOCKER_IMAGE_PATTERN);
-      this.eventBus = new EventBus();
-    } catch (UnsupportedFileSystemException e) {
-      throw new RuntimeException(e);
+private final FileContext lfs;
+private final Pattern dockerImagePattern;
+private final EventBus eventBus;
+
+public DockerContainerExecutor() {
+  try {
+    this.lfs = FileContext.getLocalFSFileContext();
+    this.dockerImagePattern = Pattern.compile(DOCKER_IMAGE_PATTERN);
+    this.eventBus = new EventBus();
+  } catch (UnsupportedFileSystemException e) {
+    throw new RuntimeException(e);
+  }
+}
+
+protected void copyFile(Path src, Path dst, String owner) throws IOException {
+  lfs.util().copy(src, dst);
+}
+
+@Override
+public void init() throws IOException {
+  super.init();
+  String auth = getConf().get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
+  if (auth != null && !auth.equals("simple")) {
+    throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
+  }
+  String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
+          YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("dockerUrl: " + dockerUrl);
+  }
+  if (Strings.isNullOrEmpty(dockerUrl)) {
+    throw new IllegalStateException("DockerUrl must be configured");
+  }
+}
+
+
+@Override
+public int launchContainer(Container container,
+                           Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
+                           String userName, String appId, Path containerWorkDir,
+                           List<String> localDirs, List<String> logDirs) throws IOException {
+  Info info = new Info(container, containerWorkDir, localDirs, logDirs).invoke();
+  ContainerId containerId = info.getContainerId();
+//  String containerImageName = info.getContainerImageName();
+//  String dockerUrl = info.getDockerUrl();
+  String containerIdStr = info.getContainerIdStr();
+//  Path launchDst = info.getLaunchDst();
+//  String[] localMounts = info.getLocalMounts();
+//  String[] logMounts = info.getLogMounts();
+  ShellCommandExecutor shExec = null;
+
+  try {
+    if (isContainerActive(containerId)) {
+      shExec = createShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId);
+      String cid = shExec.getOutput();
+      if (cid.length() > 1) {
+        cid = cid.substring(0, cid.length() - 1);
+      }
+      shExec = startShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId, cid);
+      if (LOG.isDebugEnabled()) {
+        logOutput(shExec.getOutput());
+      }
+    } else {
+      LOG.info("Container " + containerIdStr +
+              " was marked as inactive. Returning terminated error");
+      return ExitCode.TERMINATED.getExitCode();
+    }
+  } catch (IOException e) {
+    String diagnostics = "Exception from container-launch: \n"
+            + StringUtils.stringifyException(e);
+    LOG.error("Exception " + diagnostics);
+
+    if (null == shExec) {
+      return -1;
+    }
+    int exitCode = shExec.getExitCode();
+    LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
+    // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
+    // terminated/killed forcefully. In all other cases, log the
+    // container-executor's output
+    if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
+            && exitCode != ExitCode.TERMINATED.getExitCode()) {
+      LOG.warn("Exception from container-launch with container ID: "
+              + containerId + " and exit code: " + exitCode, e);
+      logOutput(shExec.getOutput());
+      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+              diagnostics));
+    } else {
+      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+              "Container killed on request. Exit code is " + exitCode));
+    }
+    return exitCode;
+  } finally {
+    if (shExec != null) {
+      shExec.close();
+    }
+  }
+  return 0;
+}
+
+ShellCommandExecutor createShellExec(Container container, Path containerWorkDir, List<String> localDirs, List<String> logDirs, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId) throws IOException {
+  Info info = new Info(container, containerWorkDir, localDirs, logDirs).invoke();
+  return createShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId);
+}
+
+private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId) throws IOException {
+  List<String> commandStr = Lists.newArrayList("docker", "-H", info.dockerUrl, "create",
+          "--net", "host", "--name", info.containerIdStr, "--user", userName, "--workdir",
+          info.containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
+  commandStr.addAll(Arrays.asList(info.localMounts));
+  commandStr.addAll(Arrays.asList(info.logMounts));
+  commandStr.add(info.containerImageName.trim());
+  commandStr.add("bash");
+  commandStr.add(info.launchDst.toUri().getPath());
+  // Setup command to run
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
+  }
+  List<String> createContainerCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
+                  .toString(Commands.CREATE_DOCKER_CONTAINER.getValue()), appId,
+          info.containerIdStr, info.containerWorkDir.toString(),
+          nmPrivateContainerScriptPath.toUri().getPath().toString(),
+          nmPrivateTokensPath.toUri().getPath().toString(),
+          StringUtils.join(",", info.localDirs),
+          StringUtils.join(",", info.logDirs));
+  List<String> command = new ArrayList<String>();
+  command.addAll(createContainerCommand);
+  command.addAll(commandStr);
+  ShellCommandExecutor shExec = new ShellCommandExecutor(command.toArray(new String[command.size()])
+          , null, // NM's cwd
+          info.container.getLaunchContext().getEnvironment()); // sanitized env
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("command: " + command);
+  }
+  shExec.execute();
+  if (LOG.isDebugEnabled()) {
+    logOutput(shExec.getOutput());
+  }
+  return shExec;
+}
+
+private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId, String cid) throws IOException {
+
+  List<String> manageContainerCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
+                  .toString(Commands.MANAGE_DOCKER_CONTAINER.getValue()), appId,
+          info.containerIdStr, info.containerWorkDir.toString(),
+          nmPrivateContainerScriptPath.toUri().getPath().toString(),
+          nmPrivateTokensPath.toUri().getPath().toString(),
+          StringUtils.join(",", info.localDirs),
+          StringUtils.join(",", info.logDirs));
+  DockerEventSubscriber subscriber = new DockerEventSubscriber(
+          Joiner.on(" ").join(Lists.newArrayList("docker", "-H", info.dockerUrl)),
+          getPidFilePath(info.containerId),
+          cid);
+  eventBus.register(subscriber);
+  List<String> containerStartCommand = new ArrayList<>(manageContainerCommand);
+
+  List<String> dockerStartScript = Arrays.asList("docker", "-H", info.dockerUrl, "start", "-a", info.containerIdStr);
+  containerStartCommand.addAll(dockerStartScript);
+  ShellCommandExecutor shExec = new ShellCommandExecutor(
+          containerStartCommand.toArray(new String[containerStartCommand.size()]),
+          null, // NM's cwd
+          info.container.getLaunchContext().getEnvironment()); // sanitized env
+  shExec.execute();
+  if (LOG.isDebugEnabled()) {
+    logOutput(shExec.getOutput());
+  }
+  List<String> containerRmCommand = new ArrayList<>(manageContainerCommand);
+  List<String> dockerRmScript = Arrays.asList("docker", "-H", info.dockerUrl, "rm", info.containerIdStr);
+  containerRmCommand.addAll(dockerRmScript);
+  shExec = new ShellCommandExecutor(
+          containerRmCommand.toArray(new String[containerRmCommand.size()]),
+          null, // NM's cwd
+          info.container.getLaunchContext().getEnvironment()); // sanitized env
+  shExec.execute();
+  return shExec;
+}
+
+@Override
+public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
+  ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
+
+  Set<String> exclusionSet = new HashSet<String>();
+  exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+  exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
+
+  if (environment != null) {
+    for (Map.Entry<String, String> env : environment.entrySet()) {
+      if (!exclusionSet.contains(env.getKey())) {
+        sb.env(env.getKey().toString(), env.getValue().toString());
+      }
+    }
+  }
+  if (resources != null) {
+    for (Map.Entry<Path, List<String>> entry : resources.entrySet()) {
+      for (String linkName : entry.getValue()) {
+        sb.symlink(entry.getKey(), new Path(linkName));
+      }
     }
   }
 
-  protected void copyFile(Path src, Path dst, String owner) throws IOException {
-    lfs.util().copy(src, dst);
-  }
+  sb.command(command);
 
-  @Override
-  public void init() throws IOException {
-    super.init();
-    String auth = getConf().get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
-    if (auth != null && !auth.equals("simple")) {
-      throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
-    }
-    String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
-      YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
+  PrintStream pout = null;
+  PrintStream ps = null;
+  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+  try {
+    pout = new PrintStream(out, false, "UTF-8");
     if (LOG.isDebugEnabled()) {
-      LOG.debug("dockerUrl: " + dockerUrl);
+      ps = new PrintStream(baos, false, "UTF-8");
+      sb.write(ps);
     }
-    if (Strings.isNullOrEmpty(dockerUrl)) {
-      throw new IllegalStateException("DockerUrl must be configured");
+    sb.write(pout);
+
+  } finally {
+    if (out != null) {
+      out.close();
     }
- }
+    if (ps != null) {
+      ps.close();
+    }
+  }
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("Script: " + baos.toString("UTF-8"));
+  }
+}
 
+private class Info {
+  private Container container;
+  private Path containerWorkDir;
+  private List<String> localDirs;
+  private List<String> logDirs;
+  private String containerImageName;
+  private String dockerUrl;
+  private ContainerId containerId;
+  private String containerIdStr;
+  private Path launchDst;
+  private String[] localMounts;
+  private String[] logMounts;
 
-  @Override
-  public int launchContainer(Container container,
-                             Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
-                             String userName, String appId, Path containerWorkDir,
-                             List<String> localDirs, List<String> logDirs) throws IOException {
-    String containerImageName = container.getLaunchContext().getEnvironment()
-        .get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+  public Info(Container container, Path containerWorkDir, List<String> localDirs, List<String> logDirs) {
+    this.container = container;
+    this.containerWorkDir = containerWorkDir;
+    this.localDirs = localDirs;
+    this.logDirs = logDirs;
+  }
+
+  public Container getContainer() {
+    return container;
+  }
+
+  public Path getContainerWorkDir() {
+    return containerWorkDir;
+  }
+
+  public List<String> getLocalDirs() {
+    return localDirs;
+  }
+
+  public List<String> getLogDirs() {
+    return logDirs;
+  }
+
+  public String getContainerImageName() {
+    return containerImageName;
+  }
+
+  public String getDockerUrl() {
+    return dockerUrl;
+  }
+
+  public ContainerId getContainerId() {
+    return containerId;
+  }
+
+  public String getContainerIdStr() {
+    return containerIdStr;
+  }
+
+  public Path getLaunchDst() {
+    return launchDst;
+  }
+
+  public String[] getLocalMounts() {
+    return localMounts;
+  }
+
+  public String[] getLogMounts() {
+    return logMounts;
+  }
+
+  public Info invoke() {
+    containerImageName = container.getLaunchContext().getEnvironment()
+            .get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
     if (LOG.isDebugEnabled()) {
       LOG.debug("containerImageName from launchContext: " + containerImageName);
     }
@@ -111,169 +368,19 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     containerImageName = containerImageName.replaceAll("['\"]", "");
 
     Preconditions.checkArgument(saneDockerImage(containerImageName), "Image: " + containerImageName + " is not a proper docker image");
-    String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
-        YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
+    dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
+            YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
 
-    ContainerId containerId = container.getContainerId();
+    containerId = container.getContainerId();
+    containerIdStr = ConverterUtils.toString(containerId);
 
-    String containerIdStr = ConverterUtils.toString(containerId);
-
-    Path launchDst =
-        new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
+    launchDst = new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
 
     String localDirMount = toMount(localDirs);
     String logDirMount = toMount(logDirs);
-
-    String[] localMounts = localDirMount.trim().split("\\s+");
-    String[] logMounts = logDirMount.trim().split("\\s+");
-    List<String> commandStr = Lists.newArrayList("docker", "-H", dockerUrl, "create",
-            "--net", "host", "--name", containerIdStr, "--user", userName, "--workdir",
-            containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
-    commandStr.addAll(Arrays.asList(localMounts));
-    commandStr.addAll(Arrays.asList(logMounts));
-    commandStr.add(containerImageName.trim());
-    commandStr.add("bash");
-    commandStr.add(launchDst.toUri().getPath());
-    List<String> dockerRmScript = Arrays.asList("docker", "-H", dockerUrl, "rm", containerIdStr);
-    List<String> dockerStartScript = Arrays.asList("docker", "-H", dockerUrl, "start", "-a", containerIdStr);
-    ShellCommandExecutor shExec = null;
-    try {
-      // Setup command to run
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
-      }
-      List<String> containerExecCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
-              .toString(Commands.LAUNCH_DOCKER_CONTAINER.getValue()), appId,
-              containerIdStr, containerWorkDir.toString(),
-              nmPrivateContainerScriptPath.toUri().getPath().toString(),
-              nmPrivateTokensPath.toUri().getPath().toString(),
-              StringUtils.join(",", localDirs),
-              StringUtils.join(",", logDirs));
-      List<String> command = new ArrayList<String>();
-      command.addAll(containerExecCommand);
-      command.addAll(commandStr);
-      shExec = new ShellCommandExecutor(command.toArray(new String[command.size()])
-              , null, // NM's cwd
-              container.getLaunchContext().getEnvironment()); // sanitized env
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("command: " + command);
-      }
-   if (isContainerActive(containerId)) {
-        shExec.execute();
-        if (LOG.isDebugEnabled()) {
-          logOutput(shExec.getOutput());
-        }
-         String cid = shExec.getOutput();
-         if (cid.length() > 1) {
-           cid = cid.substring(0, cid.length() - 1);
-         }
-         DockerEventSubscriber subscriber = new DockerEventSubscriber(
-                 Joiner.on(" ").join(Lists.newArrayList("docker", "-H", dockerUrl)),
-                 getPidFilePath(containerId),
-                 cid);
-         eventBus.register(subscriber);
-        List<String> containerStartCommand = new ArrayList<>(containerExecCommand);
-        containerStartCommand.addAll(dockerStartScript);
-        shExec = new ShellCommandExecutor(containerStartCommand.toArray(new String[containerStartCommand.size()]),
-                null, // NM's cwd
-                container.getLaunchContext().getEnvironment()); // sanitized env
-        shExec.execute();
-        if (LOG.isDebugEnabled()) {
-          logOutput(shExec.getOutput());
-        }
-     List<String> containerRmCommand = new ArrayList<>(containerExecCommand);
-     containerRmCommand.addAll(dockerRmScript);
-     shExec = new ShellCommandExecutor(containerRmCommand.toArray(new String[containerRmCommand.size()]),
-             null, // NM's cwd
-             container.getLaunchContext().getEnvironment()); // sanitized env
-     shExec.execute();
-     if (LOG.isDebugEnabled()) {
-       logOutput(shExec.getOutput());
-     }
-      } else {
-        LOG.info("Container " + containerIdStr +
-            " was marked as inactive. Returning terminated error");
-        return ExitCode.TERMINATED.getExitCode();
-      }
-    } catch (IOException e) {
-      int exitCode = shExec.getExitCode();
-      LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
-      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
-      // terminated/killed forcefully. In all other cases, log the
-      // container-executor's output
-      if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
-          && exitCode != ExitCode.TERMINATED.getExitCode()) {
-        LOG.warn("Exception from container-launch with container ID: "
-            + containerId + " and exit code: " + exitCode, e);
-        logOutput(shExec.getOutput());
-        String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e) + "\n" + shExec.getOutput();
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            diagnostics));
-      } else {
-        container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
-            "Container killed on request. Exit code is " + exitCode));
-      }
-      return exitCode;
-    } finally {
-      if (shExec != null) {
-        shExec.close();
-      }
-    }
-    return 0;
-  }
-
-@Override
-  public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
-    ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
-
-    Set<String> exclusionSet = new HashSet<String>();
-    exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
-    exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
-    exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
-
-    if (environment != null) {
-      for (Map.Entry<String,String> env : environment.entrySet()) {
-        if (!exclusionSet.contains(env.getKey())) {
-          sb.env(env.getKey().toString(), env.getValue().toString());
-        }
-      }
-    }
-    if (resources != null) {
-      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
-        for (String linkName : entry.getValue()) {
-          sb.symlink(entry.getKey(), new Path(linkName));
-        }
-      }
-    }
-
-    sb.command(command);
-
-    PrintStream pout = null;
-    PrintStream ps = null;
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    try {
-      pout = new PrintStream(out, false, "UTF-8");
-      if (LOG.isDebugEnabled()) {
-        ps = new PrintStream(baos, false, "UTF-8");
-        sb.write(ps);
-      }
-      sb.write(pout);
-
-    } finally {
-      if (out != null) {
-        out.close();
-      }
-      if (ps != null) {
-        ps.close();
-      }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Script: " + baos.toString("UTF-8"));
-    }
+    localMounts = localDirMount.trim().split("\\s+");
+    logMounts = logDirMount.trim().split("\\s+");
+    return this;
   }
 
   private boolean saneDockerImage(String containerImageName) {
@@ -282,6 +389,7 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
 
   /**
    * Converts a directory list to a docker mount string
+   *
    * @param dirs
    * @return a string of mounts for docker
    */
@@ -292,5 +400,5 @@ public class DockerContainerExecutor extends LinuxContainerExecutor {
     }
     return builder.toString();
   }
-
+}
 }

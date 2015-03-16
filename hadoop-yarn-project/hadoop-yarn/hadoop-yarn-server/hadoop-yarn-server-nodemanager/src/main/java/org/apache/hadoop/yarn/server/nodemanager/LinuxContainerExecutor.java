@@ -117,7 +117,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     LAUNCH_CONTAINER(1),
     SIGNAL_CONTAINER(2),
     DELETE_AS_USER(3),
-    LAUNCH_DOCKER_CONTAINER(4);
+    CREATE_DOCKER_CONTAINER(4),
+    MANAGE_DOCKER_CONTAINER(5);
 
     private int value;
     Commands(int value) {

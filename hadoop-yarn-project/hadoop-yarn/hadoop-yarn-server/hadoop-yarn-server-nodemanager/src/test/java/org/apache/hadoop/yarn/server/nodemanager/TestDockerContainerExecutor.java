@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
@@ -101,8 +102,7 @@ public class TestDockerContainerExecutor {
   private Path workDir;
   private FileContext lfs;
   private String yarnImage;
-
-  private int id = 0;
+  private FileContext files;
   private String appSubmitter;
   private String dockerUrl;
   private String testImage = "centos";
@@ -115,7 +115,7 @@ public class TestDockerContainerExecutor {
   }
 
   @Before
-  public void setup() {
+  public void setup() throws Exception{
     try {
       lfs = FileContext.getLocalFSFileContext();
       workDir = new Path("/tmp/temp-" + System.currentTimeMillis());
@@ -135,19 +135,44 @@ public class TestDockerContainerExecutor {
     if (Strings.isNullOrEmpty(dockerUrl)) {
       return;
     }
-    dockerUrl = " -H " + dockerUrl;
-
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerUrl);
-    exec = new DockerContainerExecutor();
+    files = FileContext.getLocalFSFileContext();
+    Path workSpacePath = new Path(workSpace.getAbsolutePath());
+    files.mkdir(workSpacePath, null, true);
+    FileUtil.chmod(workSpace.getAbsolutePath(), "777");
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
+    File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
+    files.mkdir(new Path(localDir.getAbsolutePath()),
+            new FsPermission("777"), false);
+    File logDir = new File(workSpace.getAbsoluteFile(), "logDir");
+    files.mkdir(new Path(logDir.getAbsolutePath()),
+            new FsPermission("777"), false);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerUrl);
+    String exec_path = System.getProperty("container-executor.path");
+    if(exec_path != null && !exec_path.isEmpty()) {
+      conf = new Configuration(false);
+      conf.setClass("fs.AbstractFileSystem.file.impl",
+              org.apache.hadoop.fs.local.LocalFs.class,
+              org.apache.hadoop.fs.AbstractFileSystem.class);
+      LOG.info("Setting "+YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH
+              +"="+exec_path);
+      conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
+      exec = new DockerContainerExecutor();
+      exec.setConf(conf);
+      conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+      conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
+      dirsHandler = new LocalDirsHandlerService();
+      dirsHandler.init(conf);
+    }
+
+
     exec.setConf(conf);
     appSubmitter = System.getProperty("application.submitter");
     if (appSubmitter == null || appSubmitter.isEmpty()) {
       appSubmitter = "nobody";
     }
-    shellExec("docker" + dockerUrl + " pull " + testImage);
+    shellExec("docker -H " + dockerUrl + " pull " + testImage);
 
   }
 

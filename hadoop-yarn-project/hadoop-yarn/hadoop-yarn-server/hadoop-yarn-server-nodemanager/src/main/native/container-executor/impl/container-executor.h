@@ -25,7 +25,8 @@ enum command {
   LAUNCH_CONTAINER = 1,
   SIGNAL_CONTAINER = 2,
   DELETE_AS_USER = 3,
-  LAUNCH_DOCKER_CONTAINER = 4
+  CREATE_DOCKER_CONTAINER = 4,
+  MANAGE_DOCKER_CONTAINER = 5
 };
 
 enum errorcodes {
@@ -122,6 +123,7 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
                                   const char *container_id,const char *work_dir,
                                   const char *script_name, const char *cred_file,
                                   char* const* local_dirs,char* const* log_dirs,
+                                  int create,
                                   char* const* args);
 /*
  * Function used to launch a container as the provided user. It does the following :

@@ -203,25 +203,21 @@ public class TestDockerContainerExecutorWithMocks {
     Path tokensPath = new Path("file:///dev/null");
 
     Path pidFile = new Path(workDir, "pid");
-
     dockerContainerExecutor.activateContainer(cId, pidFile);
-    int ret = dockerContainerExecutor.launchContainer(container, scriptPath, tokensPath,
-        appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
-        dirsHandler.getLogDirs());
-    assertEquals(0, ret);
-    //get the script
+    Shell.ShellCommandExecutor shellExec = dockerContainerExecutor.createShellExec(container, workDir, dirsHandler.getLocalDirs(),
+            dirsHandler.getLogDirs(), scriptPath, tokensPath,
+            appSubmitter, appId);
 
-    boolean cmdFound = false;
     List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
     List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
     List<String> expectedParams =  new ArrayList<String>(
-        Arrays.asList(appSubmitter, appSubmitter, LinuxContainerExecutor.Commands.LAUNCH_DOCKER_CONTAINER.getValue() + "",
+        Arrays.asList(appSubmitter, appSubmitter, LinuxContainerExecutor.Commands.CREATE_DOCKER_CONTAINER.getValue() + "",
                 appId, containerId, workDir.toUri().getPath(), scriptPath.toUri().getPath(),
                 tokensPath.toUri().getPath()));
     expectedParams.addAll(dirsHandler.getLocalDirs());
     expectedParams.addAll(dirsHandler.getLogDirs());
     expectedParams.addAll(Arrays.asList(
-            "docker", "-H", DOCKER_URL, "run", "--rm", "--net", "host",  "--name",
+            "docker", "-H", DOCKER_URL, "create", "--net", "host",  "--name",
                 containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
                 "-v", "/etc/passwd:/etc/passwd:ro"));
     expectedParams.addAll(localDirs);
