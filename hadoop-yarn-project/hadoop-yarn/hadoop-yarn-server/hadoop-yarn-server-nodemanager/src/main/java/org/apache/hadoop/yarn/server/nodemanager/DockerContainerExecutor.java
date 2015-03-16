@@ -105,17 +105,10 @@ public int launchContainer(Container container,
                            String userName, String appId, Path containerWorkDir,
                            List<String> localDirs, List<String> logDirs) throws IOException {
   Info info = new Info(container, containerWorkDir, localDirs, logDirs).invoke();
-  ContainerId containerId = info.getContainerId();
-//  String containerImageName = info.getContainerImageName();
-//  String dockerUrl = info.getDockerUrl();
-  String containerIdStr = info.getContainerIdStr();
-//  Path launchDst = info.getLaunchDst();
-//  String[] localMounts = info.getLocalMounts();
-//  String[] logMounts = info.getLogMounts();
   ShellCommandExecutor shExec = null;
 
   try {
-    if (isContainerActive(containerId)) {
+    if (isContainerActive(info.containerId)) {
       shExec = createShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId);
       String cid = shExec.getOutput();
       if (cid.length() > 1) {
@@ -126,7 +119,7 @@ public int launchContainer(Container container,
         logOutput(shExec.getOutput());
       }
     } else {
-      LOG.info("Container " + containerIdStr +
+      LOG.info("Container " + info.containerIdStr +
               " was marked as inactive. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
@@ -139,19 +132,19 @@ public int launchContainer(Container container,
       return -1;
     }
     int exitCode = shExec.getExitCode();
-    LOG.warn("Exit code from container " + containerId + " is : " + exitCode);
+    LOG.warn("Exit code from container " + info.containerId + " is : " + exitCode);
     // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
     // terminated/killed forcefully. In all other cases, log the
     // container-executor's output
     if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
             && exitCode != ExitCode.TERMINATED.getExitCode()) {
       LOG.warn("Exception from container-launch with container ID: "
-              + containerId + " and exit code: " + exitCode, e);
+              + info.containerId + " and exit code: " + exitCode, e);
       logOutput(shExec.getOutput());
-      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+      container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
               diagnostics));
     } else {
-      container.handle(new ContainerDiagnosticsUpdateEvent(containerId,
+      container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
               "Container killed on request. Exit code is " + exitCode));
     }
     return exitCode;
@@ -314,53 +307,11 @@ private class Info {
     this.logDirs = logDirs;
   }
 
-  public Container getContainer() {
-    return container;
-  }
-
-  public Path getContainerWorkDir() {
-    return containerWorkDir;
-  }
-
-  public List<String> getLocalDirs() {
-    return localDirs;
-  }
-
-  public List<String> getLogDirs() {
-    return logDirs;
-  }
-
-  public String getContainerImageName() {
-    return containerImageName;
-  }
-
-  public String getDockerUrl() {
-    return dockerUrl;
-  }
-
-  public ContainerId getContainerId() {
-    return containerId;
-  }
-
-  public String getContainerIdStr() {
-    return containerIdStr;
-  }
-
-  public Path getLaunchDst() {
-    return launchDst;
-  }
-
-  public String[] getLocalMounts() {
-    return localMounts;
-  }
-
-  public String[] getLogMounts() {
-    return logMounts;
-  }
-
   public Info invoke() {
     containerImageName = container.getLaunchContext().getEnvironment()
             .get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+    containerImageName = Strings.isNullOrEmpty(containerImageName) ?
+            getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME) : containerImageName;
     if (LOG.isDebugEnabled()) {
       LOG.debug("containerImageName from launchContext: " + containerImageName);
     }
