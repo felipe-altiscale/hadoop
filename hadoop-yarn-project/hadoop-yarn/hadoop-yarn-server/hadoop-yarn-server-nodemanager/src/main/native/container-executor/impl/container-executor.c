@@ -1076,7 +1076,6 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   // 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
 #if HAVE_FCLOSEALL
