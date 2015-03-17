@@ -1078,6 +1078,22 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
         S_IRUSR | S_IWUSR) != 0) {
     goto cleanup;
   }
+
+}
+if (chdir(work_dir) != 0) {
+    fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
+	    strerror(errno));
+    goto cleanup;
+  }
+  exit_code = execvp(args[0], args)
+  if (exit_code != 0) {
+    fprintf(LOGFILE, "Couldn't execute the container launch with args %s exit_code: %d - %s",
+            args[0], exit_code, strerror(errno));
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+ exit_code = 0;
+cleanup:
 #if HAVE_FCLOSEALL
   fcloseall();
 #else
@@ -1088,20 +1104,6 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   fclose(stdout);
   fclose(stderr);
 #endif
-}
-if (chdir(work_dir) != 0) {
-    fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
-	    strerror(errno));
-    goto cleanup;
-  }
-  if (execvp(args[0], args) != 0) {
-    fprintf(LOGFILE, "Couldn't execute the container launch with args %s - %s",
-            args[0], strerror(errno));
-    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
-    goto cleanup;
-  }
- exit_code = 0;
-cleanup:
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
