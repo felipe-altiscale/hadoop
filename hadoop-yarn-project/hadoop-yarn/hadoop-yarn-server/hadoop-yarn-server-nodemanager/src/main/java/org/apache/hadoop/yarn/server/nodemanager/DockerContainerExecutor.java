@@ -190,9 +190,12 @@ private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerS
   if (LOG.isDebugEnabled()) {
     LOG.debug("command: " + command);
   }
-  shExec.execute();
-  if (LOG.isDebugEnabled()) {
-    logOutput(shExec.getOutput());
+  try {
+    shExec.execute();
+  } finally {
+    if (LOG.isDebugEnabled()) {
+      logOutput(shExec.getOutput());
+    }
   }
   return shExec;
 }
@@ -219,9 +222,12 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
           containerStartCommand.toArray(new String[containerStartCommand.size()]),
           null, // NM's cwd
           info.container.getLaunchContext().getEnvironment()); // sanitized env
-  shExec.execute();
-  if (LOG.isDebugEnabled()) {
-    logOutput(shExec.getOutput());
+  try {
+    shExec.execute();
+  } finally {
+    if (LOG.isDebugEnabled()) {
+      logOutput(shExec.getOutput());
+    }
   }
   List<String> containerRmCommand = new ArrayList<>(manageContainerCommand);
   List<String> dockerRmScript = Arrays.asList("docker", "-H", info.dockerUrl, "rm", info.containerIdStr);
@@ -230,7 +236,13 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
           containerRmCommand.toArray(new String[containerRmCommand.size()]),
           null, // NM's cwd
           info.container.getLaunchContext().getEnvironment()); // sanitized env
-  shExec.execute();
+  try {
+    shExec.execute();
+  } finally {
+    if (LOG.isDebugEnabled()) {
+      logOutput(shExec.getOutput());
+    }
+  }
   return shExec;
 }
 
