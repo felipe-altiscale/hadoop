@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
     break;
   case CREATE_DOCKER_CONTAINER:
     if (argc < 11) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create launch docker container\n",
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 11) for create launch docker container\n",
           argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -244,7 +244,7 @@ int main(int argc, char **argv) {
     break;
     case MANAGE_DOCKER_CONTAINER:
         if (argc < 11) {
-          fprintf(ERRORFILE, "Wrong number of arguments (%d vs 9) for create launch docker container\n",
+          fprintf(ERRORFILE, "Wrong number of arguments (%d vs 11) for create launch docker container\n",
               argc);
           fflush(ERRORFILE);
           return INVALID_ARGUMENT_NUMBER;

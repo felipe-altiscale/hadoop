@@ -1015,7 +1015,7 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
   char *exit_code_file = NULL;
-  if(create) {
+  if(create == 1) {
   script_file_dest = get_container_launcher_file(work_dir);
   if (script_file_dest == NULL) {
     exit_code = OUT_OF_MEMORY;
@@ -1080,6 +1080,16 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   }
 
 }
+#if HAVE_FCLOSEALL
+  fcloseall();
+#else
+  // only those fds are opened assuming no bug
+  fclose(LOGFILE);
+  fclose(ERRORFILE);
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
 if (chdir(work_dir) != 0) {
     fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
 	    strerror(errno));
@@ -1094,16 +1104,6 @@ if (chdir(work_dir) != 0) {
   }
  exit_code = 0;
 cleanup:
-#if HAVE_FCLOSEALL
-  fcloseall();
-#else
-  // only those fds are opened assuming no bug
-  fclose(LOGFILE);
-  fclose(ERRORFILE);
-  fclose(stdin);
-  fclose(stdout);
-  fclose(stderr);
-#endif
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);
