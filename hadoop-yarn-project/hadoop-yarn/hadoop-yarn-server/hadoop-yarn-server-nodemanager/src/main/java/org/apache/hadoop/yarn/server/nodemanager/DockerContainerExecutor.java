@@ -176,7 +176,7 @@ private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerS
   commandStr.add(info.launchDst.toUri().getPath());
   // Setup command to run
   if (LOG.isDebugEnabled()) {
-    LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
+    LOG.debug("createContainer: " + Joiner.on(" ").join(commandStr));
   }
   List<String> createContainerCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
                   .toString(Commands.CREATE_DOCKER_CONTAINER.getValue()), appId,
@@ -235,6 +235,9 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
           containerStartCommand.toArray(new String[containerStartCommand.size()]),
           null, // NM's cwd
           info.container.getLaunchContext().getEnvironment()); // sanitized env
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("startContainer: " + Joiner.on(" ").join(dockerStartScript));
+  }
   try {
     shExec.execute();
   } finally {
