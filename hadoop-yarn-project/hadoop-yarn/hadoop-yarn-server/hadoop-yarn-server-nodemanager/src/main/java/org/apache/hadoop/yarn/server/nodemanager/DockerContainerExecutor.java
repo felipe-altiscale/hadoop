@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
@@ -30,6 +31,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -115,45 +117,47 @@ public int launchContainer(Container container,
         cid = cid.substring(0, cid.length() - 1);
       }
       shExec = startShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId, cid);
-      if (LOG.isDebugEnabled()) {
-        logOutput(shExec.getOutput());
-      }
+      return shExec.getExitCode();
     } else {
       LOG.info("Container " + info.containerIdStr +
               " was marked as inactive. Returning terminated error");
       return ExitCode.TERMINATED.getExitCode();
     }
-  } catch (IOException e) {
-    String diagnostics = "Exception from container-launch: \n"
-            + StringUtils.stringifyException(e);
-    LOG.error("Exception " + diagnostics);
-
-    if (null == shExec) {
-      return -1;
-    }
-    int exitCode = shExec.getExitCode();
-    LOG.warn("Exit code from container " + info.containerId + " is : " + exitCode);
-    // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the container was
-    // terminated/killed forcefully. In all other cases, log the
-    // container-executor's output
-    if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
-            && exitCode != ExitCode.TERMINATED.getExitCode()) {
-      LOG.warn("Exception from container-launch with container ID: "
-              + info.containerId + " and exit code: " + exitCode, e);
-      logOutput(shExec.getOutput());
-      container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
-              diagnostics));
-    } else {
-      container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
-              "Container killed on request. Exit code is " + exitCode));
-    }
-    return exitCode;
   } finally {
     if (shExec != null) {
       shExec.close();
     }
   }
-  return 0;
+}
+
+private void handleShellException(Info info, ShellCommandExecutor shExec, IOException e) {
+  int exitCode = shExec.getExitCode();
+  LOG.warn("Exit code from container " + info.containerId + " is : " + exitCode);
+  if (exitCode != ExitCode.FORCE_KILLED.getExitCode()
+          && exitCode != ExitCode.TERMINATED.getExitCode()) {
+    LOG.warn("Exception from container-launch with container ID: "
+            + info.containerId + " and exit code: " + exitCode , e);
+
+    StringBuilder builder = new StringBuilder();
+    builder.append("Exception from container-launch.\n");
+    builder.append("Container id: " + info.containerId + "\n");
+    builder.append("Exit code: " + exitCode + "\n");
+    if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
+      builder.append("Exception message: " + e.getMessage() + "\n");
+    }
+    builder.append("Stack trace: "
+            + StringUtils.stringifyException(e) + "\n");
+    if (!shExec.getOutput().isEmpty()) {
+      builder.append("Shell output: " + shExec.getOutput() + "\n");
+    }
+    String diagnostics = builder.toString();
+    logOutput(diagnostics);
+    info.container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
+            diagnostics));
+  } else {
+    info.container.handle(new ContainerDiagnosticsUpdateEvent(info.containerId,
+            "Container killed on request. Exit code is " + exitCode));
+  }
 }
 
 ShellCommandExecutor createShellExec(Container container, Path containerWorkDir, List<String> localDirs, List<String> logDirs, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId) throws IOException {
@@ -190,11 +194,20 @@ private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerS
   if (LOG.isDebugEnabled()) {
     LOG.debug("command: " + command);
   }
+  return executeShell(info, shExec);
+}
+
+private ShellCommandExecutor executeShell(Info info, ShellCommandExecutor shExec) {
   try {
     shExec.execute();
-  } finally {
-    if (LOG.isDebugEnabled()) {
-      logOutput(shExec.getOutput());
+  } catch (IOException e) {
+    handleShellException(info, shExec, e);
+  }  finally {
+    if (shExec != null) {
+      if (LOG.isDebugEnabled()) {
+        logOutput(shExec.getOutput());
+      }
+      shExec.close();
     }
   }
   return shExec;
@@ -236,14 +249,7 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
           containerRmCommand.toArray(new String[containerRmCommand.size()]),
           null, // NM's cwd
           info.container.getLaunchContext().getEnvironment()); // sanitized env
-  try {
-    shExec.execute();
-  } finally {
-    if (LOG.isDebugEnabled()) {
-      logOutput(shExec.getOutput());
-    }
-  }
-  return shExec;
+  return executeShell(info, shExec);
 }
 
 @Override

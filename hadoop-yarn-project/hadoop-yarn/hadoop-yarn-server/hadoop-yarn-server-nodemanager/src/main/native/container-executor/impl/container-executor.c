@@ -1085,7 +1085,7 @@ if (chdir(work_dir) != 0) {
 	    strerror(errno));
     goto cleanup;
   }
-  exit_code = execvp(args[0], args)
+  exit_code = execvp(args[0], args);
   if (exit_code != 0) {
     fprintf(LOGFILE, "Couldn't execute the container launch with args %s exit_code: %d - %s",
             args[0], exit_code, strerror(errno));
