@@ -308,6 +308,11 @@ public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Ma
   }
 }
 
+@Override
+public void deleteAsUser(String user, Path dir, Path... baseDirs) {
+//  super.deleteAsUser(user, dir, baseDirs);
+}
+
 private class Info {
   private Container container;
   private Path containerWorkDir;
