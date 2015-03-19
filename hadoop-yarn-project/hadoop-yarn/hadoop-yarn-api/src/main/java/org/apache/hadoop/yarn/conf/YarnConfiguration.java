@@ -930,6 +930,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME =
     NM_PREFIX + "docker-container-executor.image-name";
 
+  public static final String NM_DOCKER_CONTAINER_EXECUTOR_MODE =
+        NM_PREFIX + "docker-container-executor.mode";
+
+  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_MODE = "dce";
+
+  public static final String NM_DOCKER_CONTAINER_USER_MODE =
+          NM_PREFIX + "docker-container-executor.user-mode";
   /** The name of the docker executor (For DockerContainerExecutor).*/
   public static final String NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
     NM_PREFIX + "docker-container-executor.docker-url";

@@ -59,6 +59,9 @@ import java.util.regex.Pattern;
  */
 public class DockerContainerExecutor extends LinuxContainerExecutor {
 
+enum Mode {
+  dce, lce, both;
+}
 private static final Log LOG = LogFactory
         .getLog(DockerContainerExecutor.class);
 // This validates that the image is a proper docker image and would not crash docker.
@@ -68,7 +71,7 @@ public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\
 private final FileContext lfs;
 private final Pattern dockerImagePattern;
 private final EventBus eventBus;
-
+private Mode mode;
 public DockerContainerExecutor() {
   try {
     this.lfs = FileContext.getLocalFSFileContext();
@@ -79,13 +82,14 @@ public DockerContainerExecutor() {
   }
 }
 
-protected void copyFile(Path src, Path dst, String owner) throws IOException {
-  lfs.util().copy(src, dst);
-}
-
 @Override
 public void init() throws IOException {
   super.init();
+  mode = Mode.valueOf(getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_MODE,
+          YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_MODE));
+  if (mode == Mode.lce) {
+    return;
+  }
   String auth = getConf().get(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION);
   if (auth != null && !auth.equals("simple")) {
     throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
@@ -95,17 +99,21 @@ public void init() throws IOException {
   if (LOG.isDebugEnabled()) {
     LOG.debug("dockerUrl: " + dockerUrl);
   }
+
   if (Strings.isNullOrEmpty(dockerUrl)) {
     throw new IllegalStateException("DockerUrl must be configured");
   }
 }
-
 
 @Override
 public int launchContainer(Container container,
                            Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath,
                            String userName, String appId, Path containerWorkDir,
                            List<String> localDirs, List<String> logDirs) throws IOException {
+  if (isModeLCE(container.getLaunchContext().getEnvironment())) {
+    return super.launchContainer(container, nmPrivateContainerScriptPath, nmPrivateTokensPath,
+            userName, appId, containerWorkDir, localDirs, logDirs);
+  }
   Info info = new Info(container, containerWorkDir, localDirs, logDirs).invoke();
   ShellCommandExecutor shExec = null;
 
@@ -214,7 +222,6 @@ private ShellCommandExecutor executeShell(Info info, ShellCommandExecutor shExec
 }
 
 private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId, String cid) throws IOException {
-
   List<String> manageContainerCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
                   .toString(Commands.MANAGE_DOCKER_CONTAINER.getValue()), appId,
           info.containerIdStr, info.containerWorkDir.toString(),
@@ -255,8 +262,30 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
   return executeShell(info, shExec);
 }
 
+public boolean isModeLCE(Map<String, String> environment) {
+  Mode userMode = null;
+  if (mode == Mode.lce) {
+    return true;
+  }
+  if (mode != Mode.both) {
+    return false;
+  }
+  try {
+    userMode = Mode.valueOf(environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE));
+  } catch(IllegalArgumentException ie) {
+    LOG.warn("User provided illegal mode: " + environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE), ie);
+  }
+  return userMode == Mode.lce;
+}
+
 @Override
-public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {
+public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
+                           Map<Path, List<String>> resources, List<String> command)
+        throws IOException {
+  if (isModeLCE(environment)) {
+    super.writeLaunchEnv(out, environment, resources, command);
+    return;
+  }
   ContainerLaunch.ShellScriptBuilder sb = ContainerLaunch.ShellScriptBuilder.create();
 
   Set<String> exclusionSet = new HashSet<String>();
