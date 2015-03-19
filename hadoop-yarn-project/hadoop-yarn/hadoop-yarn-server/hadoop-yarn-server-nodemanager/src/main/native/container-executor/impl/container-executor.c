@@ -1076,6 +1076,7 @@ int launch_docker_container_as_user(const char *user,const char *app_id,
   // 600
   if (copy_file(cred_file_source, cred_file, cred_file_dest,
         S_IRUSR | S_IWUSR) != 0) {
+        fprintf(LOGFILE, "Could not copy files");
     goto cleanup;
   }
 
