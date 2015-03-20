@@ -265,16 +265,20 @@ private ShellCommandExecutor startShellExec(Info info, Path nmPrivateContainerSc
 public boolean isModeLCE(Map<String, String> environment) {
   Mode userMode = null;
   if (mode == Mode.lce) {
+
     return true;
   }
   if (mode != Mode.both) {
     return false;
   }
-  try {
-    userMode = Mode.valueOf(environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE));
-  } catch(IllegalArgumentException ie) {
-    LOG.warn("User provided illegal mode: " + environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE), ie);
+  if(environment.containsKey(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE)) {
+    try {
+      userMode = Mode.valueOf(environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE));
+    } catch (IllegalArgumentException ie) {
+      LOG.warn("User provided illegal mode: " + environment.get(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE), ie);
+    }
   }
+  LOG.debug("Mode_is_set_to " + userMode);
   return userMode == Mode.lce;
 }
 
@@ -290,6 +294,8 @@ public void writeLaunchEnv(OutputStream out, Map<String, String> environment,
 
   Set<String> exclusionSet = new HashSet<String>();
   exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+  exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_MODE);
+  exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_USER_MODE);
   exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
   exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
   exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
