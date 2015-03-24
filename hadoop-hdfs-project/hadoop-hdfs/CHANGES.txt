@@ -376,6 +376,8 @@ Release 2.7.1 - 2015-07-06
     HDFS-7995. Implement chmod in the HDFS Web UI.
     (Ravi Prakash and Haohui Mai via wheat9)
 
+    HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES

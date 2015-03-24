@@ -139,12 +139,25 @@
   </div>
 
       <div class="row">
-	<form onsubmit="return false;">
-	  <div class="input-group"><input type="text" class="form-control" id=
-					  "directory" /> <span class="input-group-btn"><button class="btn btn-default"
-											       type="submit" id="btn-nav-directory"><span class="input-group-btn">Go!</span></button></span></div>
-	</form>
+      <div class="col-xs-11">
+        <form onsubmit="return false;">
+          <div class="input-group">
+            <input type="text" class="form-control" id="directory"/>
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button" id="btn-nav-directory">Go!</button>
+            </span>
+          </div>
+        </form>
       </div>
+      <div class="col-xs-1">
+        <button type="button" class="btn btn-default" data-toggle="modal"
+          aria-label="New Directory" data-target="#btn-create-directory"
+          title="Create Directory">
+            <span class="glyphicon glyphicon-folder-open"></span>
+        </button>
+      </div>
+    </div>
+
       <br />
       <div id="panel"></div>
 
