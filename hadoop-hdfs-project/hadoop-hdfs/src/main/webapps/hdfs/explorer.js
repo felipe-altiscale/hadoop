@@ -276,7 +276,8 @@
   }
 
   $('#btn-create-directory').on('show.bs.modal', function(event) {
-    $('#new_directory_pwd').text(current_directory);
+    var modal = $(this)
+    $('#new_directory_pwd').html(current_directory);
   });
 
   $('#btn-create-directory-send').click(function () {
