@@ -120,11 +120,11 @@ public int launchContainer(Container container,
   try {
     if (isContainerActive(info.containerId)) {
       shExec = createShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId);
-      String cid = shExec.getOutput();
-      if (cid.length() > 1) {
-        cid = cid.substring(0, cid.length() - 1);
-      }
-      shExec = startShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId, cid);
+//      String cid = shExec.getOutput();
+//      if (cid.length() > 1) {
+//        cid = cid.substring(0, cid.length() - 1);
+//      }
+//      shExec = startShellExec(info, nmPrivateContainerScriptPath, nmPrivateTokensPath, userName, appId, cid);
       return shExec.getExitCode();
     } else {
       LOG.info("Container " + info.containerIdStr +
@@ -174,17 +174,21 @@ ShellCommandExecutor createShellExec(Container container, Path containerWorkDir,
 }
 
 private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId) throws IOException {
-  List<String> commandStr = Lists.newArrayList("docker", "-H", info.dockerUrl, "create",
+  int cip = info.containerId.hashCode() % 255;
+  String containerIp = "1.1.1." + cip;
+  List<String> commandStr = Lists.newArrayList("midware", "-c", "eth3", "-b", "alti2", "-i",
+          containerIp, "--", "docker", "-H", info.dockerUrl, "run",
           "--name", info.containerIdStr, "--user", userName, "--workdir",
           info.containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
   commandStr.addAll(Arrays.asList(info.localMounts));
   commandStr.addAll(Arrays.asList(info.logMounts));
   commandStr.add(info.containerImageName.trim());
+  commandStr.add("--");
   commandStr.add("bash");
   commandStr.add(info.launchDst.toUri().getPath());
   // Setup command to run
   if (LOG.isDebugEnabled()) {
-    LOG.debug("createContainer: " + Joiner.on(" ").join(commandStr));
+    LOG.debug("runContainer: " + Joiner.on(" ").join(commandStr));
   }
   List<String> createContainerCommand = Arrays.asList(containerExecutorExe, userName, userName, Integer
                   .toString(Commands.CREATE_DOCKER_CONTAINER.getValue()), appId,
