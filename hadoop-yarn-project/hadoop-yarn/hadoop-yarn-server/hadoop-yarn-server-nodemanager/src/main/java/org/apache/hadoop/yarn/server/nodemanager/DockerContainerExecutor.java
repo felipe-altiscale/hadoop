@@ -175,7 +175,7 @@ ShellCommandExecutor createShellExec(Container container, Path containerWorkDir,
 
 private ShellCommandExecutor createShellExec(Info info, Path nmPrivateContainerScriptPath, Path nmPrivateTokensPath, String userName, String appId) throws IOException {
   List<String> commandStr = Lists.newArrayList("docker", "-H", info.dockerUrl, "create",
-          "--net", "host", "--name", info.containerIdStr, "--user", userName, "--workdir",
+          "--name", info.containerIdStr, "--user", userName, "--workdir",
           info.containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
   commandStr.addAll(Arrays.asList(info.localMounts));
   commandStr.addAll(Arrays.asList(info.logMounts));
