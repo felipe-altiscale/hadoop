@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -141,9 +142,9 @@ public class TaskAttemptListenerImpl extends CompositeService
       }
 
       server.start();
-      this.address = NetUtils.createSocketAddrForHost(
-          context.getNMHostname(),
-          server.getListenerAddress().getPort());
+      this.address = server.getListenerAddress();
+      LOG.info("Instantiated TASL at " + this.address);
+
     } catch (IOException e) {
       throw new YarnRuntimeException(e);
     }

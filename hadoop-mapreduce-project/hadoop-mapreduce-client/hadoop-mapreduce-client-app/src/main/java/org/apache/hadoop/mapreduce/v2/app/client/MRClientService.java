@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app.client;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
@@ -131,9 +132,8 @@ public class MRClientService extends AbstractService implements ClientService {
     }
 
     server.start();
-    this.bindAddress = NetUtils.createSocketAddrForHost(appContext.getNMHostname(),
-        server.getListenerAddress().getPort());
-    LOG.info("Instantiated MRClientService at " + this.bindAddress);
+    this.bindAddress = server.getListenerAddress();
+    LOG.info("Instantiated MRClientService TASL at " + this.bindAddress);
     try {
       // Explicitly disabling SSL for map reduce task as we can't allow MR users
       // to gain access to keystore file for opening SSL listener. We can trust
