@@ -200,6 +200,9 @@ Release 2.7.2 - 2016-01-25
     
     HADOOP-12451. Setting HADOOP_HOME explicitly should be allowed. (kasha)
 
+    YARN-3021. YARN's delegation-token handling disallows certain trust setups to 
+    operate properly over DistCp. Contributed by Yongjun Zhang
+
     HADOOP-12230. hadoop-project declares duplicate, conflicting curator
     dependencies. (Rakesh R via aajisaka)
 
@@ -230,6 +233,9 @@ Release 2.7.1 - 2015-07-06
 
     HADOOP-11827. Speed-up distcp buildListing() using threadpool
     (Zoran Dimitrijevic via raviprak)
+
+    HADOOP-12436. GlobPattern regex library has performance issues with
+    wildcard characters (Matthew Paduano via aw)
 
   OPTIMIZATIONS
 
