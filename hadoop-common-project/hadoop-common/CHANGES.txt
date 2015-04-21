@@ -415,6 +415,9 @@ Release 2.7.1 - 2015-07-06
     HADOOP-12103. Small refactoring of DelegationTokenAuthenticationFilter to
     allow code sharing. (Yongjun Zhang)
 
+    HADOOP-11827. Speed-up distcp buildListing() using threadpool
+    (Zoran Dimitrijevic via raviprak)
+
   OPTIMIZATIONS
 
   BUG FIXES
