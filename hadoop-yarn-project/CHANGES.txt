@@ -20,6 +20,9 @@ Release 2.7.1 - 2015-06-28
 
     YARN-3345. Add non-exclusive node label API. (Wangda Tan via jianhe)
 
+    YARN-3225. New parameter of CLI for decommissioning node gracefully in 
+    RMAdmin CLI. (Devaraj K via junping_du)
+
   IMPROVEMENTS
 
     YARN-3243. CapacityScheduler should pass headroom from parent to children
