@@ -573,6 +573,9 @@ Release 2.7.1 - 2015-07-06
 
     HADOOP-11891. OsSecureRandom should lazily fill its reservoir (asuresh)
 
+    HADOOP-11876. Refactor code to make it more readable, minor
+    maybePrintStats bug (Zoran Dimitrijevic via raviprak)
+
     HADOOP-9658. SnappyCodec#checkNativeCodeLoaded may unexpectedly fail when
     native code is not loaded. (Zhijie Shen via ozawa)
 
