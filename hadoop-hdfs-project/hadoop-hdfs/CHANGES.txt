@@ -830,6 +830,9 @@ Release 2.7.1 - 2015-07-06
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
+    HDFS-8214. Secondary NN Web UI shows wrong date for Last Checkpoint. (clamb via wang)
+
+
     HDFS-5215. dfs.datanode.du.reserved is not considered while computing
     available space ( Brahma Reddy Battula via Yongjun Zhang)
 
