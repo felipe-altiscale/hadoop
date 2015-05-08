@@ -38,6 +38,9 @@ Release 2.7.1 - 2015-06-28
     YARN-3711. Documentation of ResourceManager HA should explain configurations
     about listen addresses. (Masatake Iwasaki via ozawa)
 
+    YARN-2331. Distinguish shutdown during supervision vs. shutdown for
+    rolling upgrade. (Jason Lowe via xgong)
+
   OPTIMIZATIONS
 
     YARN-3006. Improve the error message when attempting manual failover with 
