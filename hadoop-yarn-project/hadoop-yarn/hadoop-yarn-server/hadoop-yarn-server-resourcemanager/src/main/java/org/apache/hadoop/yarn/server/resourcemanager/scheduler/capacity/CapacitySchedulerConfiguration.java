@@ -132,6 +132,11 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final String NODE_LOCALITY_DELAY = 
      PREFIX + "node-locality-delay";
 
+
+  @Private
+  public static final String TREAT_OFF_SWITCH_AS_RACK =
+        PREFIX + "treat-off-switch-as-rack";
+
   @Private 
   public static final int DEFAULT_NODE_LOCALITY_DELAY = -1;
 
@@ -345,6 +350,10 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public int getNodeLocalityDelay() {
     int delay = getInt(NODE_LOCALITY_DELAY, DEFAULT_NODE_LOCALITY_DELAY);
     return (delay == DEFAULT_NODE_LOCALITY_DELAY) ? 0 : delay;
+  }
+
+  public boolean isTreatOffSwitchAsRack() {
+    return getBoolean(TREAT_OFF_SWITCH_AS_RACK, false);
   }
   
   public ResourceCalculator getResourceCalculator() {

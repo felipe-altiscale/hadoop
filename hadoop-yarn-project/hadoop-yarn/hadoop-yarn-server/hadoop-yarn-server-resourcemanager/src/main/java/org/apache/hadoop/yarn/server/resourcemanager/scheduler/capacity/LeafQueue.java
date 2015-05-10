@@ -92,7 +92,7 @@ public class LeafQueue implements CSQueue {
   private int maxActiveApplicationsPerUser;
   
   private int nodeLocalityDelay;
-  
+  private boolean treatOffSwitchAsRack;
   private Resource usedResources = Resources.createResource(0, 0);
   private float usedCapacity = 0.0f;
   private volatile int numContainers;
@@ -201,7 +201,8 @@ public class LeafQueue implements CSQueue {
         userLimit, userLimitFactor, 
         maxApplications, maxAMResourcePerQueuePercent, maxApplicationsPerUser,
         maxActiveApplications, maxActiveApplicationsPerUser, state, acls, cs
-            .getConfiguration().getNodeLocalityDelay());
+            .getConfiguration().getNodeLocalityDelay(),
+            cs.getConfiguration().isTreatOffSwitchAsRack());
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -223,7 +224,8 @@ public class LeafQueue implements CSQueue {
       int maxApplications, float maxAMResourcePerQueuePercent,
       int maxApplicationsPerUser, int maxActiveApplications,
       int maxActiveApplicationsPerUser, QueueState state,
-      Map<QueueACL, AccessControlList> acls, int nodeLocalityDelay)
+      Map<QueueACL, AccessControlList> acls, int nodeLocalityDelay,
+      boolean treatOffSwitchAsRack)
   {
     // Sanity check
     CSQueueUtils.checkMaxCapacity(getQueueName(), capacity, maximumCapacity);
@@ -255,7 +257,7 @@ public class LeafQueue implements CSQueue {
     this.queueInfo.setQueueState(this.state);
     
     this.nodeLocalityDelay = nodeLocalityDelay;
-
+    this.treatOffSwitchAsRack = treatOffSwitchAsRack;
     StringBuilder aclsString = new StringBuilder();
     for (Map.Entry<QueueACL, AccessControlList> e : acls.entrySet()) {
       aclsString.append(e.getKey() + ":" + e.getValue().getAclString());
@@ -319,7 +321,8 @@ public class LeafQueue implements CSQueue {
         " [= configuredState ]" + "\n" +
         "acls = " + aclsString +
         " [= configuredAcls ]" + "\n" + 
-        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n");
+        "nodeLocalityDelay = " +  nodeLocalityDelay + "\n" +
+        "treatOffSwitchAsRack = " +  treatOffSwitchAsRack + "\n");
   }
   
   @Override
@@ -1237,7 +1240,12 @@ public class LeafQueue implements CSQueue {
       float localityWaitFactor = 
         application.getLocalityWaitFactor(priority, 
             scheduler.getNumClusterNodes());
-      
+      if (treatOffSwitchAsRack) {
+        return (
+            Math.min(scheduler.getNumClusterNodes(), getNodeLocalityDelay()) <
+            missedOpportunities
+            );
+      }
       return ((requiredContainers * localityWaitFactor) < missedOpportunities);
     }
 
