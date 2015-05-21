@@ -116,7 +116,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
-                              char* const* log_dirs, const char *docker_binary,
+                              char* const* log_dirs,
                               const char *command_file);
 
 /*
@@ -256,4 +256,4 @@ int traffic_control_read_stats(char *command_file);
 /**
  * Run a docker command passing the command file as an argument
  */
-int run_docker(const char *docker_binary, const char *command_file);
+int run_docker(const char *command_file);

@@ -103,6 +103,23 @@ int write_config_file(char *file_name, int banned) {
     fprintf(file, "min.user.id=0\n");
   }
   fprintf(file, "allowed.system.users=allowedUser,daemon\n");
+  fprintf(file, "docker.binary=/usr/bin/docker\n");
+  fclose(file);
+  return 0;
+}
+
+int write_docker_command_file(char *file_name) {
+  FILE *file;
+  file = fopen(file_name, "w");
+  if (file == NULL) {
+    printf("Failed to open %s.\n", file_name);
+    return EXIT_FAILURE;
+  }
+  fprintf(file, "run ");
+  fprintf(file, "busybox ");
+  fprintf(file, "sh -c ' ");
+  fprintf(file, "echo hello ");
+  fprintf(file, "' ");
   fclose(file);
   return 0;
 }
@@ -241,6 +258,20 @@ void test_resolve_config_path() {
   if (strcmp(resolve_config_path("../bin/ls", "/bin/ls"), "/bin/ls") != 0) {
     printf("FAIL: failed to resolve config_name on a relative path name: ../bin/ls (relative to /bin/ls)");
     exit(1);
+  }
+}
+
+void test_run_docker() {
+  printf("\nTesting run_docker\n");
+
+  if (write_docker_command_file(TEST_ROOT "/docker_command_file") != 0) {
+     printf("Cannot write to docker_command_file");
+     exit(1);
+  }
+  const char* docker_command_file = TEST_ROOT "/docker_command_file";
+  if (run_docker(docker_command_file) != 0) {
+       printf("Cannot launch container");
+       exit(1);
   }
 }
 

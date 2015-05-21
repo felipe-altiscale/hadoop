@@ -1024,7 +1024,7 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-int run_docker(const char *docker_binary, const char *command_file) {
+int run_docker(const char *command_file) {
 
   int i = 0, j = 0;
   size_t len = 0;
@@ -1032,6 +1032,11 @@ int run_docker(const char *docker_binary, const char *command_file) {
   int read;
   FILE *stream;
   stream = fopen(command_file, "r");
+  if (stream == NULL) {
+    fprintf(ERRORFILE, "Cannot open file %s - %s",
+                  command_file, strerror(errno));
+    exit(1);
+  }
   if ((read = getline(&line, &len, stream)) != -1) {
       fprintf(LOGFILE, "Retrieved line of length %d :\n", read);
       fprintf(LOGFILE, "%s", line);
@@ -1046,6 +1051,7 @@ int run_docker(const char *docker_binary, const char *command_file) {
   }
   word_count++;
   char *args[word_count + 1];
+  char* docker_binary = get_value("docker.binary");
   args[i++] = docker_binary;
   char *pch;
   fprintf(LOGFILE,"Splitting string \"%s\" into tokens:\n",line);
@@ -1069,7 +1075,7 @@ int run_docker(const char *docker_binary, const char *command_file) {
   }
   int exit_code = -1;
   if (execvp(docker_binary, args)) {
-    fprintf(LOGFILE, "Couldn't execute the container launch with args %s - %s",
+    fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
               docker_binary, strerror(errno));
       exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
   }
@@ -1082,8 +1088,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
-                              char* const* log_dirs,
-                              const char *docker_binary, const char *command_file) {
+                              char* const* log_dirs, const char *command_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -1153,7 +1158,7 @@ if (chdir(work_dir) != 0) {
 	    strerror(errno));
     goto cleanup;
   }
-  if (run_docker(docker_binary, command_file) != 0) {
+  if (run_docker(command_file) != 0) {
     goto cleanup;
   }
  exit_code = 0;

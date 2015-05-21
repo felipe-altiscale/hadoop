@@ -49,7 +49,7 @@ static void display_usage(FILE *stream) {
       "       container-executor --tc-modify-state <command-file>\n" \
       "       container-executor --tc-read-state <command-file>\n" \
       "       container-executor --tc-read-stats <command-file>\n" \
-      "       container-executor --run-docker <docker-binary> <command-file>\n" \
+      "       container-executor --run-docker <command-file>\n" \
       "       container-executor <user> <yarn-user> <command> <command-args>\n"  \
       "       where command and command-args: \n" \
       "            initialize container:  %2d appid tokens nm-local-dirs nm-log-dirs cmd app...\n" \
@@ -161,7 +161,6 @@ static struct {
   const char *dir_to_be_deleted;
   int container_pid;
   int signal;
-  const char *docker_binary;
   const char *docker_command_file;
 } cmd_input;
 
@@ -236,7 +235,6 @@ static int validate_arguments(int argc, char **argv , int *operation) {
       return INVALID_ARGUMENT_NUMBER;
     }
     optind++;
-    cmd_input.docker_binary = argv[optind++];
     cmd_input.docker_command_file = argv[optind++];
     *operation = RUN_DOCKER;
     return 0;
@@ -299,7 +297,6 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
     cmd_input.pid_file = argv[optind++];
     cmd_input.local_dirs = argv[optind++];// good local dirs as a comma separated list
     cmd_input.log_dirs = argv[optind++];// good log dirs as a comma separated list
-    cmd_input.docker_binary = argv[optind++];
     cmd_input.docker_command_file = argv[optind++];
 
     *operation = RUN_AS_USER_LAUNCH_DOCKER_CONTAINER;
@@ -422,7 +419,7 @@ int main(int argc, char **argv) {
     exit_code = traffic_control_read_stats(cmd_input.traffic_control_command_file);
     break;
   case RUN_DOCKER:
-    exit_code = run_docker(cmd_input.docker_binary, cmd_input.docker_command_file);
+    exit_code = run_docker(cmd_input.docker_command_file);
     break;
   case RUN_AS_USER_INITIALIZE_CONTAINER:
     exit_code = set_user(cmd_input.run_as_user_name);
@@ -453,7 +450,6 @@ int main(int argc, char **argv) {
                       cmd_input.pid_file,
                       extract_values(cmd_input.local_dirs),
                       extract_values(cmd_input.log_dirs),
-                      cmd_input.docker_binary,
                       cmd_input.docker_command_file);
       break;
   case RUN_AS_USER_LAUNCH_CONTAINER:
