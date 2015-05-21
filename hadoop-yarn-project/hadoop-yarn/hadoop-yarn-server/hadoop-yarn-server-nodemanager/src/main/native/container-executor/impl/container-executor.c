@@ -1024,32 +1024,31 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-static int run_docker(const char *docker_binary, char *command_file) {
+int run_docker(const char *docker_binary, const char *command_file) {
 
   int i = 0, j = 0;
   size_t len = 0;
   char *line = NULL;
   int read;
-  File *stream;
+  FILE *stream;
   stream = fopen(command_file, "r");
   if ((read = getline(&line, &len, stream)) != -1) {
-      fprintf(LOGFILE, "Retrieved line of length %zu :\n", read);
+      fprintf(LOGFILE, "Retrieved line of length %d :\n", read);
       fprintf(LOGFILE, "%s", line);
   }
-  fclose(command_file)
+  fclose(stream);
 
-  int word_count = 0
+  int word_count = 0;
   for (i = 0; line[i] != '\0';i++)
   {
      if (line[i] == ' ')
        word_count++;
   }
-  word_count++
+  word_count++;
   char *args[word_count + 1];
   args[i++] = docker_binary;
-  char * pch;
+  char *pch;
   fprintf(LOGFILE,"Splitting string \"%s\" into tokens:\n",line);
-
   pch = strtok(line, " ");
 
   while (pch != NULL)
@@ -1060,14 +1059,13 @@ static int run_docker(const char *docker_binary, char *command_file) {
       args[i++] = pch;
   }
   fprintf(LOGFILE, "docker_args: ");
-  int i = 0;
-  for(i = 0; args[i] != '\0'; i++)
+  for(j = 0; args[j] != '\0'; j++)
   {
-    fprintf(LOGFILE, "%s ", args[i]);
+    fprintf(LOGFILE, "%s ", args[j]);
   }
 
   if (line) {
-    free(line)
+    free(line);
   }
   int exit_code = -1;
   if (execvp(docker_binary, args)) {
@@ -1075,16 +1073,17 @@ static int run_docker(const char *docker_binary, char *command_file) {
               docker_binary, strerror(errno));
       exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
   }
-  exit_code = 0
+  exit_code = 0;
   return exit_code;
 }
 
 
-int launch_docker_container_as_user(const char *user,const char *app_id,
-                              const char *container_id,const char *work_dir,
+int launch_docker_container_as_user(const char * user, const char *app_id,
+                              const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
-                              char* const* local_dirs,char* const* log_dirs,
-                              const char *docker_binary, char *command_file) {
+                              const char *pid_file, char* const* local_dirs,
+                              char* const* log_dirs,
+                              const char *docker_binary, const char *command_file) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
