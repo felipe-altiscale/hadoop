@@ -1024,6 +1024,158 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
+static int run_docker(const char *docker_binary, char *command_file) {
+
+  int i = 0, j = 0;
+  size_t len = 0;
+  char *line = NULL;
+  int read;
+  File *stream;
+  stream = fopen(command_file, "r");
+  if ((read = getline(&line, &len, stream)) != -1) {
+      fprintf(LOGFILE, "Retrieved line of length %zu :\n", read);
+      fprintf(LOGFILE, "%s", line);
+  }
+  fclose(command_file)
+
+  int word_count = 0
+  for (i = 0; line[i] != '\0';i++)
+  {
+     if (line[i] == ' ')
+       word_count++;
+  }
+  word_count++
+  char *args[word_count + 1];
+  args[i++] = docker_binary;
+  char * pch;
+  fprintf(LOGFILE,"Splitting string \"%s\" into tokens:\n",line);
+
+  pch = strtok(line, " ");
+
+  while (pch != NULL)
+  {
+    printf ("%s\n",pch);
+    pch = strtok(line, " ");
+    if (pch != NULL)
+      args[i++] = pch;
+  }
+  fprintf(LOGFILE, "docker_args: ");
+  int i = 0;
+  for(i = 0; args[i] != '\0'; i++)
+  {
+    fprintf(LOGFILE, "%s ", args[i]);
+  }
+
+  if (line) {
+    free(line)
+  }
+  int exit_code = -1;
+  if (execvp(docker_binary, args)) {
+    fprintf(LOGFILE, "Couldn't execute the container launch with args %s - %s",
+              docker_binary, strerror(errno));
+      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+  }
+  exit_code = 0
+  return exit_code;
+}
+
+
+int launch_docker_container_as_user(const char *user,const char *app_id,
+                              const char *container_id,const char *work_dir,
+                              const char *script_name, const char *cred_file,
+                              char* const* local_dirs,char* const* log_dirs,
+                              const char *docker_binary, char *command_file) {
+  int exit_code = -1;
+  char *script_file_dest = NULL;
+  char *cred_file_dest = NULL;
+  char *exit_code_file = NULL;
+
+  script_file_dest = get_container_launcher_file(work_dir);
+  if (script_file_dest == NULL) {
+    exit_code = OUT_OF_MEMORY;
+    goto cleanup;
+  }
+
+  cred_file_dest = get_container_credentials_file(work_dir);
+  if (NULL == cred_file_dest) {
+    exit_code = OUT_OF_MEMORY;
+    goto cleanup;
+  }
+  // open launch script
+  int container_file_source = open_file_as_nm(script_name);
+  if (container_file_source == -1) {
+    exit_code = INVALID_NM_ROOT_DIRS;
+    goto cleanup;
+  }
+  // open credentials
+  int cred_file_source = open_file_as_nm(cred_file);
+  if (cred_file_source == -1) {
+    exit_code = INVALID_ARGUMENT_NUMBER;
+    goto cleanup;
+  }
+ // create the user directory on all disks
+  int result = initialize_user(user, local_dirs);
+  if (result != 0) {
+    return result;
+  }
+  // initializing log dirs
+  int log_create_result = create_log_dirs(app_id, log_dirs);
+  if (log_create_result != 0) {
+    return log_create_result;
+  }
+  // give up root privs
+  if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
+    exit_code = SETUID_OPER_FAILED;
+    goto cleanup;
+  }
+  // Create container specific directories as user. If there are no resources
+  // to localize for this container, app-directories and log-directories are
+  // also created automatically as part of this call.
+  if (create_container_directories(user, app_id, container_id, local_dirs,
+                                   log_dirs, work_dir) != 0) {
+    fprintf(LOGFILE, "Could not create container dirs");
+    goto cleanup;
+  }
+
+  // 700
+  if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
+    exit_code = INVALID_COMMAND_PROVIDED;
+    goto cleanup;
+  }
+  // 600
+  if (copy_file(cred_file_source, cred_file, cred_file_dest,
+        S_IRUSR | S_IWUSR) != 0) {
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
+if (chdir(work_dir) != 0) {
+    fprintf(LOGFILE, "Can't change directory to %s -%s\n", work_dir,
+	    strerror(errno));
+    goto cleanup;
+  }
+  if (run_docker(docker_binary, command_file) != 0) {
+    goto cleanup;
+  }
+ exit_code = 0;
+cleanup:
+#if HAVE_FCLOSEALL
+  fcloseall();
+#else
+  // only those fds are opened assuming no bug
+  fclose(LOGFILE);
+  fclose(ERRORFILE);
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+#endif
+  free(exit_code_file);
+  free(script_file_dest);
+  free(cred_file_dest);
+  return exit_code;
+}
+
+
 int launch_container_as_user(const char *user, const char *app_id, 
                    const char *container_id, const char *work_dir,
                    const char *script_name, const char *cred_file,
@@ -1155,7 +1307,7 @@ int launch_container_as_user(const char *user, const char *app_id,
     goto cleanup;
   }
   if (execlp(script_file_dest, script_file_dest, NULL) != 0) {
-    fprintf(LOGFILE, "Couldn't execute the container launch file %s - %s", 
+    fprintf(LOGFILE, "Couldn't execute the container launch file %s - %s",
             script_file_dest, strerror(errno));
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;

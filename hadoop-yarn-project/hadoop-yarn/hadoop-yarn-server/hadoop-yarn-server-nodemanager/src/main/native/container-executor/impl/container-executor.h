@@ -241,3 +241,9 @@ int traffic_control_read_state(char *command_file);
  * calling process.
  */
 int traffic_control_read_stats(char *command_file);
+
+
+/**
+ * Run a docker command passing the command file as an argument
+ */
+int run_docker(const char *docker_binary, char *command_file);
