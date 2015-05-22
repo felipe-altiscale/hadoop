@@ -1039,10 +1039,8 @@ int run_docker(const char *command_file) {
   }
   if ((read = getline(&line, &len, stream)) != -1) {
       fprintf(LOGFILE, "Retrieved line of length %d :\n", read);
-      fprintf(LOGFILE, "%s", line);
   }
   fclose(stream);
-
   int word_count = 0;
   for (i = 0; line[i] != '\0';i++)
   {
@@ -1050,31 +1048,13 @@ int run_docker(const char *command_file) {
        word_count++;
   }
   word_count++;
-  char *args[word_count + 1];
+  char docker_command[strlen(line) + 1];
   char* docker_binary = get_value("docker.binary");
-  args[i++] = docker_binary;
-  char *pch;
-  fprintf(LOGFILE,"Splitting string \"%s\" into tokens:\n",line);
-  pch = strtok(line, " ");
-
-  while (pch != NULL)
-  {
-    printf ("%s\n",pch);
-    pch = strtok(line, " ");
-    if (pch != NULL)
-      args[i++] = pch;
-  }
-  fprintf(LOGFILE, "docker_args: ");
-  for(j = 0; args[j] != '\0'; j++)
-  {
-    fprintf(LOGFILE, "%s ", args[j]);
-  }
-
-  if (line) {
-    free(line);
-  }
+  sprintf(docker_command, "%s %s", docker_binary, line);
+  fprintf(LOGFILE,"Docker command %s - wc %d\n",docker_command, word_count);
+  char **args = extract_values_delim(docker_command, " ");
   int exit_code = -1;
-  if (execvp(docker_binary, args)) {
+  if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
               docker_binary, strerror(errno));
       exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
@@ -1117,6 +1097,26 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     exit_code = INVALID_ARGUMENT_NUMBER;
     goto cleanup;
   }
+  pid_t child_pid = fork();
+    if (child_pid != 0) {
+      // parent
+      exit_code = wait_and_write_exit_code(child_pid, exit_code_file);
+      goto cleanup;
+    }
+
+    // setsid
+    pid_t pid = setsid();
+    if (pid == -1) {
+      exit_code = SETSID_OPER_FAILED;
+      goto cleanup;
+    }
+
+    // write pid to pidfile
+    if (pid_file == NULL
+        || write_pid_to_file_as_nm(pid_file, pid) != 0) {
+      exit_code = WRITE_PIDFILE_FAILED;
+      goto cleanup;
+    }
  // create the user directory on all disks
   int result = initialize_user(user, local_dirs);
   if (result != 0) {
