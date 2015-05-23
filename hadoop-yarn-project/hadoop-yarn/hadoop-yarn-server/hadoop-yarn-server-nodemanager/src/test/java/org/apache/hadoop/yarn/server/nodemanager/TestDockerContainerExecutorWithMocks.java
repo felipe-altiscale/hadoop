@@ -221,7 +221,7 @@ public void testContainerLaunch() throws IOException {
   expectedParams.addAll(dirsHandler.getLocalDirs());
   expectedParams.addAll(dirsHandler.getLogDirs());
   expectedParams.addAll(Arrays.asList(
-          "docker", "-H", DOCKER_URL, "run", "--rm", "--net", "host",  "--name",
+          "-H", DOCKER_URL, "run", "--rm", "--net", "host",  "--name",
           containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
           "-v", "/etc/passwd:/etc/passwd:ro"));
   expectedParams.addAll(localDirs);
