@@ -61,7 +61,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
-  private String containerExecutorExe;
+  protected String containerExecutorExe;
   private LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
@@ -123,8 +123,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     INITIALIZE_CONTAINER(0),
     LAUNCH_CONTAINER(1),
     SIGNAL_CONTAINER(2),
-    DELETE_AS_USER(3);
-
+    DELETE_AS_USER(3),
+    LAUNCH_DOCKER_CONTAINER(4);
     private int value;
     Commands(int value) {
       this.value = value;

@@ -18,18 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.google.common.base.Strings;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +26,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -45,192 +35,221 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.base.Strings;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
- * This is intended to test the DockerContainerExecutor code, but it requires
- * docker to be installed.
+ * This is intended to test the DockerContainerExecutor code, but it requires docker
+ * to be installed.
  * <br><ol>
- * <li>To run the tests, set the docker-service-url to the host and port where
- * docker service is running (If docker-service-url is not specified then the
- * local daemon will be used).
+ * <li>Compile the code with container-executor.conf.dir set to the location you
+ * want for testing.
  * <br><pre><code>
- * mvn test -Ddocker-service-url=tcp://0.0.0.0:4243 -Dtest=TestDockerContainerExecutor
+ * > mvn clean install -Pnative -Dcontainer-executor.conf.dir=/etc/hadoop
+ *                          -DskipTests
  * </code></pre>
+ *
+ * <li>Set up <code>${container-executor.conf.dir}/container-executor.cfg</code>
+ * container-executor.cfg needs to be owned by root and have in it the proper
+ * config values.
+ * <br><pre><code>
+ * > cat /etc/hadoop/container-executor.cfg
+ * yarn.nodemanager.linux-container-executor.group=yarn
+ * #depending on the user id of the application.submitter option
+ * min.user.id=1
+ * > sudo chown root:root /etc/hadoop/container-executor.cfg
+ * > sudo chmod 444 /etc/hadoop/container-executor.cfg
+ * </code></pre>
+ *
+ * <li>Move the binary and set proper permissions on it. It needs to be owned
+ * by root, the group needs to be the group configured in container-executor.cfg,
+ * and it needs the setuid bit set. (The build will also overwrite it so you
+ * need to move it to a place that you can support it.
+ * <br><pre><code>
+ * > cp ./hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
+ * > sudo chown root:yarn /tmp/container-executor
+ * > sudo chmod 4550 /tmp/container-executor
+ * </code></pre>
+ *
+ * <li>Run the tests with the execution enabled (The user you run the tests as
+ * needs to be part of the group from the config.
+ * <li>Install docker, and Compile the code with docker-service-url set to the host and port
+ * where docker service is running.
+ * <br><pre><code>
+ * mvn test -Dtest=TestDockerContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor -Ddocker-service-url=tcp://0.0.0.0:4243
+ * </code></pre>
+ * </ol>
  */
 public class TestDockerContainerExecutor {
-  private static final Log LOG = LogFactory
-    .getLog(TestDockerContainerExecutor.class);
-  private static File workSpace = null;
-  private DockerContainerExecutor exec = null;
-  private LocalDirsHandlerService dirsHandler;
-  private Path workDir;
-  private FileContext lfs;
-  private String yarnImage;
+private static final Log LOG = LogFactory
+        .getLog(TestDockerContainerExecutor.class);
+private static File workSpace = null;
+private DockerContainerExecutor exec = null;
+private LocalDirsHandlerService dirsHandler;
+private Path workDir;
+private FileContext lfs;
+private String yarnImage;
 
-  private String appSubmitter;
-  private String dockerUrl;
-  private String testImage = "centos:latest";
-  private String dockerExec;
-  private ContainerId getNextContainerId() {
-    ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
-    String id = "CONTAINER_" + System.currentTimeMillis();
-    when(cId.toString()).thenReturn(id);
-    return cId;
+private int id = 0;
+private String appSubmitter;
+private String dockerUrl;
+private String testImage = "centos";
+
+private ContainerId getNextContainerId() {
+  ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
+  String id = "CONTAINER_" + System.currentTimeMillis();
+  when(cId.toString()).thenReturn(id);
+  return cId;
+}
+
+@Before
+public void setup() {
+  try {
+    lfs = FileContext.getLocalFSFileContext();
+    workDir = new Path("/tmp/temp-" + System.currentTimeMillis());
+    workSpace = new File(workDir.toUri().getPath());
+    lfs.mkdir(workDir, FsPermission.getDirDefault(), true);
+  } catch (IOException e) {
+    throw new RuntimeException(e);
   }
+  Configuration conf = new Configuration();
+  yarnImage = "yarnImage";
+  long time = System.currentTimeMillis();
+  conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
+  conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
 
-  @Before
-  //Initialize a new DockerContainerExecutor that will be used to launch mocked
-  //containers.
-  public void setup() {
-    try {
-      lfs = FileContext.getLocalFSFileContext();
-      workDir = new Path("/tmp/temp-" + System.currentTimeMillis());
-      workSpace = new File(workDir.toUri().getPath());
-      lfs.mkdir(workDir, FsPermission.getDirDefault(), true);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    Configuration conf = new Configuration();
-    yarnImage = "yarnImage";
-    long time = System.currentTimeMillis();
-    conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
-    conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
-
-    dockerUrl = System.getProperty("docker-service-url");
-    LOG.info("dockerUrl: " + dockerUrl);
-    if (!Strings.isNullOrEmpty(dockerUrl)) {
-      dockerUrl = " -H " + dockerUrl;
-    } else if(isDockerDaemonRunningLocally()) {
-      dockerUrl = "";
-    } else {
-      return;
-    }
-    dockerExec = "docker " + dockerUrl;
-    conf.set(
-      YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-    conf.set(
-      YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME, dockerExec);
-    exec = new DockerContainerExecutor();
-    dirsHandler = new LocalDirsHandlerService();
-    dirsHandler.init(conf);
-    exec.setConf(conf);
-    appSubmitter = System.getProperty("application.submitter");
-    if (appSubmitter == null || appSubmitter.isEmpty()) {
-      appSubmitter = "nobody";
-    }
-    shellExec(dockerExec + " pull " + testImage);
-
+  dockerUrl = System.getProperty("docker-service-url");
+  LOG.info("dockerUrl: " + dockerUrl);
+  if (Strings.isNullOrEmpty(dockerUrl)) {
+    return;
   }
+  dockerUrl = " -H " + dockerUrl;
 
-  private Shell.ShellCommandExecutor shellExec(String command) {
-    try {
-      Shell.ShellCommandExecutor shExec = new Shell.ShellCommandExecutor(
-        command.split("\\s+"),
-        new File(workDir.toUri().getPath()),
-        System.getenv());
-      shExec.execute();
-      return shExec;
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
+  conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerUrl);
+  exec = new DockerContainerExecutor();
+  dirsHandler = new LocalDirsHandlerService();
+  dirsHandler.init(conf);
+  exec.setConf(conf);
+  appSubmitter = System.getProperty("application.submitter");
+  if (appSubmitter == null || appSubmitter.isEmpty()) {
+    appSubmitter = "nobody";
   }
+  shellExec("docker" + dockerUrl + " pull " + testImage);
 
-  private boolean shouldRun() {
-    return exec != null;
+}
+
+private Shell.ShellCommandExecutor shellExec(String command) {
+  try {
+
+    Shell.ShellCommandExecutor shExec = new Shell.ShellCommandExecutor(
+            command.split("\\s+"),
+            new File(workDir.toUri().getPath()),
+            System.getenv());
+    shExec.execute();
+    return shExec;
+  } catch (IOException e) {
+    throw new RuntimeException(e);
   }
+}
 
-  private boolean isDockerDaemonRunningLocally() {
-    boolean dockerDaemonRunningLocally = true;
-      try {
-        shellExec("docker info");
-      } catch (Exception e) {
-        LOG.info("docker daemon is not running on local machine.");
-        dockerDaemonRunningLocally = false;
-      }
-      return dockerDaemonRunningLocally;
-  }
+private boolean shouldRun() {
+  return exec != null;
+}
 
-  /**
-   * Test that a docker container can be launched to run a command
-   * @param cId a fake ContainerID
-   * @param launchCtxEnv
-   * @param cmd the command to launch inside the docker container
-   * @return the exit code of the process used to launch the docker container
-   * @throws IOException
-   */
-  private int runAndBlock(ContainerId cId, Map<String, String> launchCtxEnv,
-    String... cmd) throws IOException {
-    String appId = "APP_" + System.currentTimeMillis();
-    Container container = mock(Container.class);
-    ContainerLaunchContext context = mock(ContainerLaunchContext.class);
+private int runAndBlock(ContainerId cId, Map<String, String> launchCtxEnv, String... cmd) throws IOException {
+  String appId = "APP_" + System.currentTimeMillis();
+  Container container = mock(Container.class);
+  ContainerLaunchContext context = mock(ContainerLaunchContext.class);
 
-    when(container.getContainerId()).thenReturn(cId);
-    when(container.getLaunchContext()).thenReturn(context);
-    when(cId.getApplicationAttemptId().getApplicationId().toString())
-      .thenReturn(appId);
-    when(context.getEnvironment()).thenReturn(launchCtxEnv);
+  when(container.getContainerId()).thenReturn(cId);
+  when(container.getLaunchContext()).thenReturn(context);
+  when(cId.getApplicationAttemptId().getApplicationId().toString()).thenReturn(appId);
+  when(context.getEnvironment()).thenReturn(launchCtxEnv);
 
-    String script = writeScriptFile(launchCtxEnv, cmd);
+  String script = writeScriptFile(launchCtxEnv, cmd);
 
-    Path scriptPath = new Path(script);
-    Path tokensPath = new Path("/dev/null");
-    Path workDir = new Path(workSpace.getAbsolutePath());
-    Path pidFile = new Path(workDir, "pid.txt");
+  Path scriptPath = new Path(script);
+  Path tokensPath = new Path("/dev/null");
+  Path workDir = new Path(workSpace.getAbsolutePath());
+  Path pidFile = new Path(workDir, "pid.txt");
 
-    exec.activateContainer(cId, pidFile);
-    return exec.launchContainer(container, scriptPath, tokensPath,
-      appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
-      dirsHandler.getLogDirs());
-  }
+  exec.activateContainer(cId, pidFile);
+  return exec.launchContainer(container, scriptPath, tokensPath,
+          appSubmitter, appId, workDir, dirsHandler.getLocalDirs(),
+          dirsHandler.getLogDirs());
+}
 
-  // Write the script used to launch the docker container in a temp file
-  private String writeScriptFile(Map<String, String> launchCtxEnv,
-    String... cmd) throws IOException {
-    File f = File.createTempFile("TestDockerContainerExecutor", ".sh");
-    f.deleteOnExit();
-    PrintWriter p = new PrintWriter(new FileOutputStream(f));
-    for(Map.Entry<String, String> entry: launchCtxEnv.entrySet()) {
+private String writeScriptFile(Map<String, String> launchCtxEnv, String... cmd) throws IOException {
+  File f = File.createTempFile("TestDockerContainerExecutor", ".sh");
+  f.deleteOnExit();
+  ByteArrayOutputStream baos = new ByteArrayOutputStream();
+  PrintWriter p = new PrintWriter(new FileOutputStream(f));
+  PrintWriter q = new PrintWriter(baos);
+  Set<String> exclusionSet = new HashSet<String>();
+  exclusionSet.add(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME);
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_YARN_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_COMMON_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_HDFS_HOME.name());
+  exclusionSet.add(ApplicationConstants.Environment.HADOOP_CONF_DIR.name());
+  exclusionSet.add(ApplicationConstants.Environment.JAVA_HOME.name());
+  for(Map.Entry<String, String> entry: launchCtxEnv.entrySet()) {
+    if (!exclusionSet.contains(entry.getKey())) {
       p.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
-    }
-    for (String part : cmd) {
-      p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
-      p.print(" ");
-    }
-    p.println();
-    p.close();
-    return f.getAbsolutePath();
-  }
-
-  @After
-  public void tearDown() {
-    try {
-      lfs.delete(workDir, true);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+      q.println("export " + entry.getKey() + "=\"" + entry.getValue() + "\"");
     }
   }
-
-  /**
-   * Test that a touch command can be launched successfully in a docker
-   * container
-   */
-  @Test(timeout=1000000)
-  public void testLaunchContainer() throws IOException {
-    if (!shouldRun()) {
-      LOG.warn("Docker not installed, aborting test.");
-      return;
-    }
-
-    Map<String, String> env = new HashMap<String, String>();
-    env.put(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME,
-      testImage);
-    String touchFileName = "touch-file-" + System.currentTimeMillis();
-    File touchFile = new File(dirsHandler.getLocalDirs().get(0), touchFileName);
-    ContainerId cId = getNextContainerId();
-    int ret = runAndBlock(cId, env, "touch", touchFile.getAbsolutePath(), "&&",
-      "cp", touchFile.getAbsolutePath(), "/");
-
-    assertEquals(0, ret);
+  for (String part : cmd) {
+    p.print(part.replace("\\", "\\\\").replace("'", "\\'"));
+    p.print(" ");
+    q.print(part.replace("\\", "\\\\").replace("'", "\\'"));
+    q.print(" ");
   }
+  p.println();
+  p.close();
+  q.println();
+  q.close();
+  if (LOG.isDebugEnabled()) {
+    LOG.debug("Launch script: " + baos.toString("UTF-8"));
+  }
+  return f.getAbsolutePath();
+}
+
+@After
+public void tearDown() {
+  try {
+    lfs.delete(workDir, true);
+  } catch (IOException e) {
+    throw new RuntimeException(e);
+  }
+}
+
+@Test
+public void testLaunchContainer() throws IOException {
+  if (!shouldRun()) {
+    LOG.warn("Docker not installed, aborting test.");
+    return;
+  }
+
+  Map<String, String> env = new HashMap<String, String>();
+  env.put(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, testImage);
+  String touchFileName = "touch-file-" + System.currentTimeMillis();
+  ContainerId cId = getNextContainerId();
+  int ret = runAndBlock(
+          cId, env, "touch", "/tmp/" + touchFileName);
+
+  assertEquals(0, ret);
+}
 }

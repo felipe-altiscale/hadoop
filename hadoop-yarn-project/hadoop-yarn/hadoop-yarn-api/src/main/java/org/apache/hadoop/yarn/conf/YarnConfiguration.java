@@ -1026,12 +1026,24 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "docker-container-executor.image-name";
 
   /** The name of the docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-    NM_PREFIX + "docker-container-executor.exec-name";
+  public static final String NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
+    NM_PREFIX + "docker-container-executor.docker-url";
 
   /** The default docker executor (For DockerContainerExecutor).*/
-  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_EXEC_NAME =
-          "/usr/bin/docker";
+  public static final String NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
+          "tcp://localhost:4243";
+  /**
+   * True if linux-container-executor should limit itself to one user
+   * when running in non-secure mode.
+   */
+  public static final String NM_DOCKER_NONSECURE_MODE_LIMIT_USERS = NM_PREFIX +
+        "docker-container-executor.nonsecure-mode.limit-users";
+  /**
+   * The UNIX user that containers will run as when Docker-container-executor
+   * is used in nonsecure mode (a use case for this is using cgroups).
+   */
+  public static final String NM_DOCKER_NONSECURE_MODE_LOCAL_USER_KEY = NM_PREFIX +
+          "docker-container-executor.nonsecure-mode.local-user";
 
   /** The path to the Linux container executor.*/
   public static final String NM_LINUX_CONTAINER_EXECUTOR_PATH =
