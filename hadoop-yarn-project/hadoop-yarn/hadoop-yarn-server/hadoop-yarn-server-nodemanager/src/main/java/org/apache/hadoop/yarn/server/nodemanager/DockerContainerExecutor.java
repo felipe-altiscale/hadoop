@@ -36,12 +36,19 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -59,10 +66,13 @@ private static final Log LOG = LogFactory
         .getLog(DockerContainerExecutor.class);
 // This validates that the image is a proper docker image and would not crash docker.
 public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
-
+private static final String TMP_FILE_PREFIX = "dc";
+private static final String TMP_FILE_SUFFIX = ".cmds";
 
 private final FileContext lfs;
 private final Pattern dockerImagePattern;
+private String tmpDirPath;
+
 public DockerContainerExecutor() {
   try {
     this.lfs = FileContext.getLocalFSFileContext();
@@ -88,6 +98,17 @@ public void init() throws IOException {
   if (LOG.isDebugEnabled()) {
     LOG.debug("dockerUrl: " + dockerUrl);
   }
+  String tmpDirBase = getConf().get("hadoop.tmp.dir");
+  if (tmpDirBase == null) {
+    throw new IllegalStateException("hadoop.tmp.dir not set!");
+  }
+  tmpDirPath = tmpDirBase + "/nm-dc-command";
+  File tmpDir = new File(tmpDirPath);
+  if (!(tmpDir.exists() || tmpDir.mkdirs())) {
+    LOG.warn("Unable to create directory: " + tmpDirPath);
+    throw new RuntimeException("Unable to create directory: " +
+            tmpDirPath);
+  }
   if (Strings.isNullOrEmpty(dockerUrl)) {
     throw new IllegalStateException("DockerUrl must be configured");
   }
@@ -108,8 +129,6 @@ public int launchContainer(Container container,
   containerImageName = containerImageName.replaceAll("['\"]", "");
 
   Preconditions.checkArgument(saneDockerImage(containerImageName), "Image: " + containerImageName + " is not a proper docker image");
-  String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
-          YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
 
   ContainerId containerId = container.getContainerId();
 
@@ -123,26 +142,27 @@ public int launchContainer(Container container,
 
   String[] localMounts = localDirMount.trim().split("\\s+");
   String[] logMounts = logDirMount.trim().split("\\s+");
-  List<String> commandStr = Lists.newArrayList("-H", dockerUrl, "run", "--rm",
-          "--net", "host", "--name", containerIdStr, "--user", userName, "--workdir",
-          containerWorkDir.toUri().getPath(), "-v", "/etc/passwd:/etc/passwd:ro");
+  List<String> commandStr = Lists.newArrayList("run",
+          "--net", "host", "--name", containerIdStr, "--user", userName,
+          "-v", "/etc/passwd:/etc/passwd:ro");
   commandStr.addAll(Arrays.asList(localMounts));
   commandStr.addAll(Arrays.asList(logMounts));
   commandStr.add(containerImageName.trim());
   commandStr.add("bash");
   commandStr.add(launchDst.toUri().getPath());
-
+  // write it out to a file. has to be the same docker command file
+  String commandFilePath = writeCommandFile(Joiner.on(" ").join(commandStr), containerIdStr);
   ShellCommandExecutor shExec = null;
   try {
     // Setup command to run
     if (LOG.isDebugEnabled()) {
       LOG.debug("launchContainer: " + Joiner.on(" ").join(commandStr));
     }
-
+    String runAsUser = getRunAsUser(userName);
     List<String> launchDocker = new ArrayList<String>();
     Path pidFilePath = getPidFilePath(containerId);
     launchDocker.addAll(Arrays.asList(
-            containerExecutorExe, userName, userName, Integer
+            containerExecutorExe, runAsUser, userName, Integer
                     .toString(Commands.LAUNCH_DOCKER_CONTAINER.getValue()), appId,
             containerIdStr, containerWorkDir.toString(),
             nmPrivateContainerScriptPath.toUri().getPath().toString(),
@@ -150,7 +170,7 @@ public int launchContainer(Container container,
             pidFilePath.toString(),
             StringUtils.join(",", localDirs),
             StringUtils.join(",", logDirs)));
-    launchDocker.addAll(commandStr);
+    launchDocker.add(commandFilePath);
     shExec = new ShellCommandExecutor(launchDocker.toArray(new String[launchDocker.size()])
             , null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
@@ -194,6 +214,25 @@ public int launchContainer(Container container,
   }
   return 0;
 }
+
+private String writeCommandFile(String dockerCommand, String containerId) throws IOException {
+  try {
+    File dcCmds = File.createTempFile(TMP_FILE_PREFIX + "-" + containerId + ".", TMP_FILE_SUFFIX, new
+            File(tmpDirPath));
+    LOG.info("writing dockerCommandFile to: " +dcCmds.getAbsolutePath());
+    Writer writer = new OutputStreamWriter(new FileOutputStream(dcCmds),
+            "UTF-8");
+    PrintWriter printWriter = new PrintWriter(writer);
+    printWriter.println(dockerCommand);
+    printWriter.close();
+
+    return dcCmds.getAbsolutePath();
+  } catch (IOException e) {
+    LOG.error("Failed to create or write to temporary file in dir: " +
+            tmpDirPath);
+    throw e;
+  }
+} //end BatchBuilder
 
 @Override
 public void writeLaunchEnv(OutputStream out, Map<String, String> environment, Map<Path, List<String>> resources, List<String> command) throws IOException {

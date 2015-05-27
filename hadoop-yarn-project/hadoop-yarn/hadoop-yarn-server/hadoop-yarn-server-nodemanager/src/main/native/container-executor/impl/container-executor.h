@@ -82,6 +82,7 @@ enum operations {
 #define MIN_USERID_KEY "min.user.id"
 #define BANNED_USERS_KEY "banned.users"
 #define ALLOWED_SYSTEM_USERS_KEY "allowed.system.users"
+#define DOCKER_BINARY_KEY "docker.binary"
 #define TMP_DIR "tmp"
 
 extern struct passwd *user_detail;

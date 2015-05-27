@@ -1026,6 +1026,10 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "docker-container-executor.image-name";
 
   /** The name of the docker executor (For DockerContainerExecutor).*/
+  public static final String NM_DOCKER_CONTAINER_COMMAND_FILE_PATH =
+        NM_PREFIX + "docker-container.command-file-path";
+
+  /** The name of the docker executor (For DockerContainerExecutor).*/
   public static final String NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL =
     NM_PREFIX + "docker-container-executor.docker-url";
 
