@@ -93,11 +93,7 @@ public void init() throws IOException {
   if (auth != null && !auth.equals("simple")) {
     throw new IllegalStateException("DockerContainerExecutor only works with simple authentication mode");
   }
-  String dockerUrl = getConf().get(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL,
-          YarnConfiguration.NM_DEFAULT_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL);
-  if (LOG.isDebugEnabled()) {
-    LOG.debug("dockerUrl: " + dockerUrl);
-  }
+
   String tmpDirBase = getConf().get("hadoop.tmp.dir");
   if (tmpDirBase == null) {
     throw new IllegalStateException("hadoop.tmp.dir not set!");
@@ -108,9 +104,6 @@ public void init() throws IOException {
     LOG.warn("Unable to create directory: " + tmpDirPath);
     throw new RuntimeException("Unable to create directory: " +
             tmpDirPath);
-  }
-  if (Strings.isNullOrEmpty(dockerUrl)) {
-    throw new IllegalStateException("DockerUrl must be configured");
   }
 }
 
@@ -136,17 +129,20 @@ public int launchContainer(Container container,
 
   Path launchDst =
           new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
-
-  String localDirMount = toMount(localDirs);
+  List<String> localWithWorkDir = new ArrayList<>(localDirs);
+  localWithWorkDir.add(containerWorkDir.toUri().getPath());
+  String localDirMount = toMount(localWithWorkDir);
   String logDirMount = toMount(logDirs);
 
   String[] localMounts = localDirMount.trim().split("\\s+");
   String[] logMounts = logDirMount.trim().split("\\s+");
-  List<String> commandStr = Lists.newArrayList("run",
+  List<String> commandStr = Lists.newArrayList("run", "--workdir",
+          containerWorkDir.toUri().getPath(),
           "--net", "host", "--name", containerIdStr, "--user", userName,
           "-v", "/etc/passwd:/etc/passwd:ro");
   commandStr.addAll(Arrays.asList(localMounts));
   commandStr.addAll(Arrays.asList(logMounts));
+
   commandStr.add(containerImageName.trim());
   commandStr.add("bash");
   commandStr.add(launchDst.toUri().getPath());
@@ -217,6 +213,7 @@ public int launchContainer(Container container,
 
 private String writeCommandFile(String dockerCommand, String containerId) throws IOException {
   try {
+    LOG.info("tmpDirPath " + tmpDirPath + " containerId " + containerId);
     File dcCmds = File.createTempFile(TMP_FILE_PREFIX + "-" + containerId + ".", TMP_FILE_SUFFIX, new
             File(tmpDirPath));
     LOG.info("writing dockerCommandFile to: " +dcCmds.getAbsolutePath());

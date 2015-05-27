@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +44,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -98,15 +101,21 @@ private static final Log LOG = LogFactory
 private static File workSpace = null;
 private DockerContainerExecutor exec = null;
 private LocalDirsHandlerService dirsHandler;
-private Path workDir;
-private FileContext lfs;
+private FileContext files;
 private String yarnImage;
 
 private int id = 0;
 private String appSubmitter;
-private String dockerUrl;
+private Configuration conf;
 private String testImage = "centos";
-
+static {
+  String basedir = System.getProperty("workspace.dir");
+  if(basedir == null || basedir.isEmpty()) {
+    basedir = "target";
+  }
+  workSpace = new File(basedir,
+          TestLinuxContainerExecutor.class.getName() + "-workSpace");
+}
 private ContainerId getNextContainerId() {
   ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
   String id = "CONTAINER_" + System.currentTimeMillis();
@@ -115,39 +124,55 @@ private ContainerId getNextContainerId() {
 }
 
 @Before
-public void setup() {
-  try {
-    lfs = FileContext.getLocalFSFileContext();
-    workDir = new Path("/tmp/temp-" + System.currentTimeMillis());
-    workSpace = new File(workDir.toUri().getPath());
-    lfs.mkdir(workDir, FsPermission.getDirDefault(), true);
-  } catch (IOException e) {
-    throw new RuntimeException(e);
-  }
-  Configuration conf = new Configuration();
-  yarnImage = "yarnImage";
-  long time = System.currentTimeMillis();
-  conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
-  conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
+public void setup() throws Exception {
+  yarnImage = "yarn-test-image";
+  files = FileContext.getLocalFSFileContext();
+  Path workSpacePath = new Path(workSpace.getAbsolutePath());
+  files.mkdir(workSpacePath, null, true);
+  FileUtil.chmod(workSpace.getAbsolutePath(), "777");
+  File localDir = new File(workSpace.getAbsoluteFile(), "localDir");
+  files.mkdir(new Path(localDir.getAbsolutePath()), new FsPermission("777"),
+          false);
+  File logDir = new File(workSpace.getAbsoluteFile(), "logDir");
+  files.mkdir(new Path(logDir.getAbsolutePath()), new FsPermission("777"),
+          false);
+  String exec_path = System.getProperty("container-executor.path");
+  if (exec_path != null && !exec_path.isEmpty()) {
+    conf = new Configuration(false);
+    conf.setClass("fs.AbstractFileSystem.file.impl",
+            org.apache.hadoop.fs.local.LocalFs.class,
+            org.apache.hadoop.fs.AbstractFileSystem.class);
 
-  dockerUrl = System.getProperty("docker-service-url");
-  LOG.info("dockerUrl: " + dockerUrl);
-  if (Strings.isNullOrEmpty(dockerUrl)) {
-    return;
-  }
-  dockerUrl = " -H " + dockerUrl;
+    appSubmitter = System.getProperty("application.submitter");
+    if (appSubmitter == null || appSubmitter.isEmpty()) {
+      appSubmitter = "nobody";
+    }
 
-  conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-  conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, dockerUrl);
-  exec = new DockerContainerExecutor();
-  dirsHandler = new LocalDirsHandlerService();
-  dirsHandler.init(conf);
-  exec.setConf(conf);
-  appSubmitter = System.getProperty("application.submitter");
-  if (appSubmitter == null || appSubmitter.isEmpty()) {
-    appSubmitter = "nobody";
+    conf.set(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY, appSubmitter);
+    conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
+
+    LOG.info("Setting " + YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH
+            + "=" + exec_path);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
+    exec = new DockerContainerExecutor();
+    exec.setConf(conf);
+
+    dirsHandler = new LocalDirsHandlerService();
+    dirsHandler.init(conf);
+    List<String> localDirs = dirsHandler.getLocalDirs();
+    for (String dir : localDirs) {
+      Path userDir = new Path(dir, ContainerLocalizer.USERCACHE);
+      files.mkdir(userDir, new FsPermission("777"), false);
+      // $local/filecache
+      Path fileDir = new Path(dir, ContainerLocalizer.FILECACHE);
+      files.mkdir(fileDir, new FsPermission("777"), false);
+    }
+    shellExec("docker pull " + testImage);
+    exec.init();
   }
-  shellExec("docker" + dockerUrl + " pull " + testImage);
+
+
+
 
 }
 
@@ -156,7 +181,7 @@ private Shell.ShellCommandExecutor shellExec(String command) {
 
     Shell.ShellCommandExecutor shExec = new Shell.ShellCommandExecutor(
             command.split("\\s+"),
-            new File(workDir.toUri().getPath()),
+            new File(workSpace.getAbsolutePath()),
             System.getenv());
     shExec.execute();
     return shExec;
@@ -230,7 +255,7 @@ private String writeScriptFile(Map<String, String> launchCtxEnv, String... cmd) 
 @After
 public void tearDown() {
   try {
-    lfs.delete(workDir, true);
+    files.delete(new Path(workSpace.getAbsolutePath()), true);
   } catch (IOException e) {
     throw new RuntimeException(e);
   }
