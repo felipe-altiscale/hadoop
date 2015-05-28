@@ -66,8 +66,8 @@ private static final Log LOG = LogFactory
         .getLog(DockerContainerExecutor.class);
 // This validates that the image is a proper docker image and would not crash docker.
 public static final String DOCKER_IMAGE_PATTERN = "^(([\\w\\.-]+)(:\\d+)*\\/)?[\\w\\.:-]+$";
-private static final String TMP_FILE_PREFIX = "dc";
-private static final String TMP_FILE_SUFFIX = ".cmds";
+static final String TMP_FILE_PREFIX = "dc";
+static final String TMP_FILE_SUFFIX = "cmds";
 
 private final FileContext lfs;
 private final Pattern dockerImagePattern;
@@ -136,7 +136,7 @@ public int launchContainer(Container container,
 
   String[] localMounts = localDirMount.trim().split("\\s+");
   String[] logMounts = logDirMount.trim().split("\\s+");
-  List<String> commandStr = Lists.newArrayList("run", "--workdir",
+  List<String> commandStr = Lists.newArrayList("run", "--rm", "--workdir",
           containerWorkDir.toUri().getPath(),
           "--net", "host", "--name", containerIdStr, "--user", userName,
           "-v", "/etc/passwd:/etc/passwd:ro");
@@ -170,8 +170,8 @@ public int launchContainer(Container container,
     shExec = new ShellCommandExecutor(launchDocker.toArray(new String[launchDocker.size()])
             , null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("launchDocker: " + launchDocker);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("launchDocker: " + launchDocker);
     }
     if (isContainerActive(containerId)) {
       shExec.execute();
@@ -213,14 +213,15 @@ public int launchContainer(Container container,
 
 private String writeCommandFile(String dockerCommand, String containerId) throws IOException {
   try {
-    LOG.info("tmpDirPath " + tmpDirPath + " containerId " + containerId);
     File dcCmds = File.createTempFile(TMP_FILE_PREFIX + "-" + containerId + ".", TMP_FILE_SUFFIX, new
             File(tmpDirPath));
-    LOG.info("writing dockerCommandFile to: " +dcCmds.getAbsolutePath());
+    if(LOG.isInfoEnabled()) {
+      LOG.info("writing dockerCommandFile to: " + dcCmds.getAbsolutePath());
+    }
     Writer writer = new OutputStreamWriter(new FileOutputStream(dcCmds),
             "UTF-8");
     PrintWriter printWriter = new PrintWriter(writer);
-    printWriter.println(dockerCommand);
+    printWriter.print(dockerCommand);
     printWriter.close();
 
     return dcCmds.getAbsolutePath();

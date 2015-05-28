@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -91,7 +92,7 @@ import static org.mockito.Mockito.when;
  * <li>Install docker, and Compile the code with docker-service-url set to the host and port
  * where docker service is running.
  * <br><pre><code>
- * mvn test -Dtest=TestDockerContainerExecutor -Dapplication.submitter=nobody -Dcontainer-executor.path=/tmp/container-executor -Ddocker-service-url=tcp://0.0.0.0:4243
+ * mvn test -Dtest=TestDockerContainerExecutor -Dapplication.submitter=nobody -Dworkspace.dir=/tmp -Dcontainer-executor.path=/tmp/container-executor -Ddocker-service-url=tcp://0.0.0.0:4243
  * </code></pre>
  * </ol>
  */
@@ -154,11 +155,15 @@ public void setup() throws Exception {
     LOG.info("Setting " + YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH
             + "=" + exec_path);
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_EXECUTOR_PATH, exec_path);
+
+    conf.set("hadoop.tmp.dir", System.getProperty("java.io.tmpdir")+ "/hadoop");
     exec = new DockerContainerExecutor();
     exec.setConf(conf);
-
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir.getAbsolutePath());
     dirsHandler = new LocalDirsHandlerService();
     dirsHandler.init(conf);
+
     List<String> localDirs = dirsHandler.getLocalDirs();
     for (String dir : localDirs) {
       Path userDir = new Path(dir, ContainerLocalizer.USERCACHE);
@@ -255,7 +260,8 @@ private String writeScriptFile(Map<String, String> launchCtxEnv, String... cmd) 
 @After
 public void tearDown() {
   try {
-    files.delete(new Path(workSpace.getAbsolutePath()), true);
+    FileContext.getLocalFSFileContext().delete(
+            new Path(workSpace.getAbsolutePath()), true);
   } catch (IOException e) {
     throw new RuntimeException(e);
   }
@@ -267,14 +273,20 @@ public void testLaunchContainer() throws IOException {
     LOG.warn("Docker not installed, aborting test.");
     return;
   }
-
+  String expectedRunAsUser =
+          conf.get(YarnConfiguration.NM_NONSECURE_MODE_LOCAL_USER_KEY,
+                  YarnConfiguration.DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
   Map<String, String> env = new HashMap<String, String>();
   env.put(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, testImage);
   String touchFileName = "touch-file-" + System.currentTimeMillis();
+  String touchFilePath = workSpace.getAbsolutePath() + "/" + touchFileName;
   ContainerId cId = getNextContainerId();
-  int ret = runAndBlock(
-          cId, env, "touch", "/tmp/" + touchFileName);
+  int ret = runAndBlock(cId, env, "touch", touchFilePath);
 
   assertEquals(0, ret);
+  FileStatus fileStatus =
+          FileContext.getLocalFSFileContext().getFileStatus(
+                  new Path(touchFilePath));
+  assertEquals(expectedRunAsUser, fileStatus.getOwner());
 }
 }

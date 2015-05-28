@@ -1057,10 +1057,17 @@ int run_docker(const char *command_file) {
     exit(1);
   }
   sprintf(docker_command, "%s %s", docker_binary, line);
-  fprintf(LOGFILE,"Docker command %s\n",docker_command);
-  fflush(LOGFILE);
   char **args = extract_values_delim(docker_command, " ");
+
   int exit_code = -1;
+  fprintf(LOGFILE, "docker_args: ");
+
+  for(i = 0; args[i] != '\0'; i++)
+  {
+    fprintf(LOGFILE, ", %s", args[i]);
+  }
+  fprintf(LOGFILE, " [done!]\n");
+  fflush(LOGFILE);
   if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
               docker_binary, strerror(errno));

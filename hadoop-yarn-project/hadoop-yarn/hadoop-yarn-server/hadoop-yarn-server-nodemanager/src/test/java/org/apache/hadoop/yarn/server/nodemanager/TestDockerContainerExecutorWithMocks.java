@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +36,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.print.Doc;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -65,9 +67,10 @@ private LocalDirsHandlerService dirsHandler;
 private Path workDir;
 private FileContext lfs;
 private String yarnImage;
+private String tmpDirPath;
 
 @Before
-public void setup() {
+public void setup() throws Exception {
   assumeTrue(Shell.LINUX);
   File f = new File("./src/test/resources/mock-container-executor");
   if(!FileUtil.canExecute(f)) {
@@ -81,8 +84,11 @@ public void setup() {
   conf.set(YarnConfiguration.NM_LOCAL_DIRS, "/tmp/nm-local-dir" + time);
   conf.set(YarnConfiguration.NM_LOG_DIRS, "/tmp/userlogs" + time);
   conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_IMAGE_NAME, yarnImage);
-  conf.set(YarnConfiguration.NM_DOCKER_CONTAINER_EXECUTOR_DOCKER_URL, DOCKER_URL);
+  String hadoopTmp = System.getProperty("java.io.tmpdir") + "/hadoop";
+  conf.set("hadoop.tmp.dir", hadoopTmp);
+  tmpDirPath = hadoopTmp + "/nm-dc-command";
   dockerContainerExecutor = new DockerContainerExecutor();
+
   dirsHandler = new LocalDirsHandlerService();
   dirsHandler.init(conf);
   dockerContainerExecutor.setConf(conf);
@@ -94,7 +100,7 @@ public void setup() {
   } catch (IOException e) {
     throw new RuntimeException(e);
   }
-
+  dockerContainerExecutor.init();
 }
 
 @After
@@ -210,9 +216,6 @@ public void testContainerLaunch() throws IOException {
           dirsHandler.getLogDirs());
   assertEquals(0, ret);
   //get the script
-  boolean cmdFound = false;
-  List<String> localDirs = dirsToMount(dirsHandler.getLocalDirs());
-  List<String> logDirs = dirsToMount(dirsHandler.getLogDirs());
   List<String> expectedParams =  new ArrayList<String>(
           Arrays.asList(appSubmitter, appSubmitter, LinuxContainerExecutor.Commands.LAUNCH_DOCKER_CONTAINER.getValue() + "",
                   appId, containerId, workDir.toUri().getPath(), scriptPath.toUri().getPath(),
@@ -220,17 +223,24 @@ public void testContainerLaunch() throws IOException {
 
   expectedParams.addAll(dirsHandler.getLocalDirs());
   expectedParams.addAll(dirsHandler.getLogDirs());
-  expectedParams.addAll(Arrays.asList(
-          "-H", DOCKER_URL, "run", "--rm", "--net", "host",  "--name",
-          containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
-          "-v", "/etc/passwd:/etc/passwd:ro"));
-  expectedParams.addAll(localDirs);
-  expectedParams.addAll(logDirs);
-  String shellScript =  workDir + "/launch_container.sh";
 
-  expectedParams.addAll(Arrays.asList(testImage.replaceAll("['\"]", ""), "bash", shellScript));
-
-  assertEquals(expectedParams, readMockParams());
+//  expectedParams.addAll(Arrays.asList(
+//          "run", "--rm", "--net", "host",  "--name",
+//          containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
+//          "-v", "/etc/passwd:/etc/passwd:ro"));
+//  expectedParams.addAll(localDirs);
+//  expectedParams.addAll(logDirs);
+//  String commandFile = tmpDirPath + "/" +
+//          DockerContainerExecutor.TMP_FILE_PREFIX + "-" + cId + "." +
+//          DockerContainerExecutor.TMP_FILE_SUFFIX;
+//  String shellScript =  workDir + "/launch_container.sh";
+//
+//  expectedParams.addAll(Arrays.asList("bash", shellScript));
+  List<String> mockParams = readMockParams();
+  mockParams.remove(mockParams.size() - 1);
+  String realParams = Joiner.on(" ").join(mockParams);
+  String expected = Joiner.on(" ").join(expectedParams);
+  assertEquals(expected, realParams);
 }
 private List<String> readMockParams() throws IOException {
   LinkedList<String> ret = new LinkedList<String>();
