@@ -224,18 +224,6 @@ public void testContainerLaunch() throws IOException {
   expectedParams.addAll(dirsHandler.getLocalDirs());
   expectedParams.addAll(dirsHandler.getLogDirs());
 
-//  expectedParams.addAll(Arrays.asList(
-//          "run", "--rm", "--net", "host",  "--name",
-//          containerId, "--user", "nobody", "--workdir", workDir.toUri().getPath(),
-//          "-v", "/etc/passwd:/etc/passwd:ro"));
-//  expectedParams.addAll(localDirs);
-//  expectedParams.addAll(logDirs);
-//  String commandFile = tmpDirPath + "/" +
-//          DockerContainerExecutor.TMP_FILE_PREFIX + "-" + cId + "." +
-//          DockerContainerExecutor.TMP_FILE_SUFFIX;
-//  String shellScript =  workDir + "/launch_container.sh";
-//
-//  expectedParams.addAll(Arrays.asList("bash", shellScript));
   List<String> mockParams = readMockParams();
   mockParams.remove(mockParams.size() - 1);
   String realParams = Joiner.on(" ").join(mockParams);
