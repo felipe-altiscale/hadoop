@@ -1091,6 +1091,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (script_file_dest == NULL) {
     exit_code = OUT_OF_MEMORY;
     fprintf(ERRORFILE, "Could not create script_file_dest");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
@@ -1098,6 +1099,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (NULL == cred_file_dest) {
     exit_code = OUT_OF_MEMORY;
     fprintf(ERRORFILE, "Could not create cred_file_dest");
+    fflush(ERRORFILE);
     goto cleanup;
   }
   // open launch script
@@ -1105,6 +1107,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (container_file_source == -1) {
     exit_code = INVALID_NM_ROOT_DIRS;
     fprintf(ERRORFILE, "Could not open container file");
+    fflush(ERRORFILE);
     goto cleanup;
   }
   // open credentials
@@ -1112,12 +1115,14 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (cred_file_source == -1) {
     exit_code = INVALID_ARGUMENT_NUMBER;
     fprintf(ERRORFILE, "Could not open cred file");
+    fflush(ERRORFILE);
     goto cleanup;
   }
   exit_code_file = get_exit_code_file(pid_file);
   if (NULL == exit_code_file) {
     exit_code = OUT_OF_MEMORY;
     fprintf(ERRORFILE, "Container out of memory");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
@@ -1150,17 +1155,20 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   int result = initialize_user(user, local_dirs);
   if (result != 0) {
     fprintf(ERRORFILE, "Could not create user dir");
+    fflush(ERRORFILE);
     return result;
   }
   // initializing log dirs
   int log_create_result = create_log_dirs(app_id, log_dirs);
   if (log_create_result != 0) {
     fprintf(ERRORFILE, "Could not create log dirs");
+    fflush(ERRORFILE);
     return log_create_result;
   }
   // give up root privs
   if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
     fprintf(ERRORFILE, "Could not change users");
+    fflush(ERRORFILE);
     exit_code = SETUID_OPER_FAILED;
     goto cleanup;
   }
@@ -1170,12 +1178,14 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   if (create_container_directories(user, app_id, container_id, local_dirs,
                                    log_dirs, work_dir) != 0) {
     fprintf(ERRORFILE, "Could not create container dirs");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
   // 700
   if (copy_file(container_file_source, script_name, script_file_dest,S_IRWXU) != 0) {
     fprintf(ERRORFILE, "Could not create copy file");
+    fflush(ERRORFILE);
     exit_code = INVALID_COMMAND_PROVIDED;
     goto cleanup;
   }
@@ -1184,12 +1194,14 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
         S_IRUSR | S_IWUSR) != 0) {
     exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     fprintf(ERRORFILE, "Could not copy file");
+    fflush(ERRORFILE);
     goto cleanup;
   }
 
   if (chdir(work_dir) != 0) {
     fprintf(ERRORFILE, "Can't change directory to %s -%s\n", work_dir,
 	    strerror(errno));
+	    fflush(ERRORFILE);
     goto cleanup;
   }
   char* docker_command = parse_docker_command_file(command_file);
