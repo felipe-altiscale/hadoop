@@ -1024,8 +1024,7 @@ int initialize_app(const char *user, const char *app_id,
   return -1;
 }
 
-int run_docker(const char *command_file) {
-
+char* parse_docker_command_file(const char* command_file) {
   int i = 0, j = 0;
   size_t len = 0;
   char *line = NULL;
@@ -1033,47 +1032,45 @@ int run_docker(const char *command_file) {
   FILE *stream;
   stream = fopen(command_file, "r");
   if (stream == NULL) {
-    fprintf(ERRORFILE, "Cannot open file %s - %s",
-                  command_file, strerror(errno));
-    fflush(ERRORFILE);
-    exit(1);
+   fprintf(ERRORFILE, "Cannot open file %s - %s",
+                 command_file, strerror(errno));
+   fflush(ERRORFILE);
+   exit(1);
   }
   if ((read = getline(&line, &len, stream)) != -1) {
-      fprintf(LOGFILE, "Retrieved line of length %d\n", read);
+     fprintf(LOGFILE, "Retrieved line of length %d\n", read);
   }
   fclose(stream);
-  int word_count = 0;
-  for (i = 0; line[i] != '\0';i++)
-  {
-     if (line[i] == ' ')
-       word_count++;
-  }
-  word_count++;
-  char docker_command[strlen(line) + 1];
+
+  return line;
+}
+
+int run_docker(const char *command_file) {
+  char* docker_command = parse_docker_command_file(command_file);
   char* docker_binary = get_value(DOCKER_BINARY_KEY);
-  if (docker_binary == NULL) {
-   fprintf(ERRORFILE, "docker.binary(%s) must be provided in container-executor.cfg", docker_binary);
-    fflush(ERRORFILE);
-    exit(1);
-  }
-  sprintf(docker_command, "%s %s", docker_binary, line);
-  char **args = extract_values_delim(docker_command, " ");
+  char* docker_command_with_binary = calloc(sizeof(char), strlen(docker_command) + 1);
+  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
+  char **args = extract_values_delim(docker_command_with_binary, " ");
 
   int exit_code = -1;
   fprintf(LOGFILE, "docker_args: ");
-
+  int i = 0;
   for(i = 0; args[i] != '\0'; i++)
   {
     fprintf(LOGFILE, ", %s", args[i]);
   }
-  fprintf(LOGFILE, " [done!]\n");
+  fprintf(LOGFILE, "\n");
   fflush(LOGFILE);
   if (execvp(docker_binary, args) != 0) {
     fprintf(ERRORFILE, "Couldn't execute the container launch with args %s - %s",
               docker_binary, strerror(errno));
       fflush(LOGFILE);
       fflush(ERRORFILE);
-      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      free(docker_binary);
+      free(args);
+      free(docker_command_with_binary);
+      free(docker_command);
+      exit_code = DOCKER_RUN_FAILED;
   }
   exit_code = 0;
   return exit_code;
@@ -1117,17 +1114,20 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fprintf(ERRORFILE, "Could not open cred file");
     goto cleanup;
   }
-//  exit_code_file = get_exit_code_file(pid_file);
-//  if (NULL == exit_code_file) {
-//    exit_code = OUT_OF_MEMORY;
-//    fprintf(ERRORFILE, "Container out of memory");
-//    goto cleanup;
-//  }
+  exit_code_file = get_exit_code_file(pid_file);
+  if (NULL == exit_code_file) {
+    exit_code = OUT_OF_MEMORY;
+    fprintf(ERRORFILE, "Container out of memory");
+    goto cleanup;
+  }
+
 //  pid_t child_pid = fork();
 //    if (child_pid != 0) {
 //      // parent
+//      popen(docker_inspect_command)
 //      exit_code = wait_and_write_exit_code(child_pid, exit_code_file);
 //      fprintf(ERRORFILE, "Could not fork");
+//      fflush(ERRORFILE);
 //      goto cleanup;
 //    }
 //
@@ -1192,10 +1192,63 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
 	    strerror(errno));
     goto cleanup;
   }
+  char* docker_command = parse_docker_command_file(command_file);
+  char* docker_binary = get_value(DOCKER_BINARY_KEY);
+  char* docker_command_with_binary = calloc(sizeof(char), strlen(docker_command) + 1);
+  sprintf(docker_command_with_binary, "%s %s", docker_binary, docker_command);
 
-  if (run_docker(command_file) != 0) {
-  fprintf(ERRORFILE, "Could not run docker");
+  //first invoke the initial command
+  FILE* start_docker = popen(docker_command_with_binary, "w");
+  if (pclose (start_docker) != 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not invoke docker %s.\n", docker_command_with_binary);
+     fflush(ERRORFILE);
+      exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+      goto cleanup;
+  }
+  //now docker inspect
+  char* docker_inspect_command = calloc(sizeof(char), strlen(docker_command_with_binary));
+  sprintf(docker_inspect_command,
+    "%s inspect --format {{.State.Pid}} %s > %s",
+    docker_binary, container_id, pid_file);
+
+//  FILE* inspect_docker = popen(docker_inspect_command, "w");
+//  if (pclose (inspect_docker) != 0)
+//  {
+//    fprintf (ERRORFILE,
+//     "Could not inspect docker %s.\n", docker_inspect_command);
+//    fflush(ERRORFILE);
+//    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+//    goto cleanup;
+//  }
+  //now attach docker
+  char docker_attach_command = calloc(sizeof(char), strlen(docker_command_with_binary));
+  sprintf(docker_attach_command,
+    "%s attach --sig-proxy=true %s", docker_binary, container_id);
+
+  FILE* attach_docker = popen(docker_attach_command, "w");
+  if (pclose (attach_docker) != 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not attach to docker %s.\n", docker_attach_command);
     fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
+    goto cleanup;
+  }
+
+  //now rm docker
+  char docker_rm_command = calloc(sizeof(char), strlen(docker_command_with_binary));
+  sprintf(docker_rm_command,
+    "%s rm %s", docker_binary, container_id);
+
+  FILE* rm_docker = popen(docker_rm_command, "w");
+  if (pclose (rm_docker) != 0)
+  {
+    fprintf (ERRORFILE,
+     "Could not attach to docker %s.\n", docker_rm_command);
+    fflush(ERRORFILE);
+    exit_code = UNABLE_TO_EXECUTE_CONTAINER_SCRIPT;
     goto cleanup;
   }
  exit_code = 0;
@@ -1210,6 +1263,13 @@ cleanup:
   fclose(stdout);
   fclose(stderr);
 #endif
+  free(docker_command);
+  free(docker_command_with_binary);
+  free(docker_binary);
+
+  free(docker_inspect_command);
+  free(docker_attach_command);
+  free(docker_rm_command);
   free(exit_code_file);
   free(script_file_dest);
   free(cred_file_dest);

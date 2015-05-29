@@ -136,7 +136,7 @@ public int launchContainer(Container container,
 
   String[] localMounts = localDirMount.trim().split("\\s+");
   String[] logMounts = logDirMount.trim().split("\\s+");
-  List<String> commandStr = Lists.newArrayList("run", "--rm", "--workdir",
+  List<String> commandStr = Lists.newArrayList("run", "-d", "--workdir",
           containerWorkDir.toUri().getPath(),
           "--net", "host", "--name", containerIdStr, "--user", userName,
           "-v", "/etc/passwd:/etc/passwd:ro");
