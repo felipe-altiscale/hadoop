@@ -262,7 +262,7 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
   fprintf(LOGFILE, "main : command provided %d\n", command);
   fprintf(LOGFILE, "main : run as user is %s\n", cmd_input.run_as_user_name);
-  fprintf(LOGFILE, "main : requested yarn user is %s\n", cmd_input.yarn_user_name);
+  fprintf(LOGFILE, "main : requested yarnyy user is %s\n", cmd_input.yarn_user_name);
   fflush(LOGFILE);
 
   switch (command) {

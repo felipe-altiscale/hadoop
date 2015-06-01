@@ -144,7 +144,7 @@ public int launchContainer(Container container,
   commandStr.addAll(Arrays.asList(logMounts));
 
   commandStr.add(containerImageName.trim());
-  commandStr.add("bash");
+  commandStr.add("bash -x");
   commandStr.add(launchDst.toUri().getPath());
   // write it out to a file. has to be the same docker command file
   String commandFilePath = writeCommandFile(Joiner.on(" ").join(commandStr), containerIdStr);

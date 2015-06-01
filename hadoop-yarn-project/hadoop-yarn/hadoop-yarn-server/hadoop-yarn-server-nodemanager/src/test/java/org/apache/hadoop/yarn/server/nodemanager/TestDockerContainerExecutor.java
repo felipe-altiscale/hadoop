@@ -50,6 +50,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -117,6 +118,9 @@ static {
   workSpace = new File(basedir,
           TestLinuxContainerExecutor.class.getName() + "-workSpace");
 }
+
+private Path pidFile;
+
 private ContainerId getNextContainerId() {
   ContainerId cId = mock(ContainerId.class, RETURNS_DEEP_STUBS);
   String id = "CONTAINER_" + System.currentTimeMillis();
@@ -175,10 +179,6 @@ public void setup() throws Exception {
     shellExec("docker pull " + testImage);
     exec.init();
   }
-
-
-
-
 }
 
 private Shell.ShellCommandExecutor shellExec(String command) {
@@ -214,7 +214,7 @@ private int runAndBlock(ContainerId cId, Map<String, String> launchCtxEnv, Strin
   Path scriptPath = new Path(script);
   Path tokensPath = new Path("/dev/null");
   Path workDir = new Path(workSpace.getAbsolutePath());
-  Path pidFile = new Path(workDir, "pid.txt");
+  pidFile = new Path(workDir, "pid.txt");
 
   exec.activateContainer(cId, pidFile);
   return exec.launchContainer(container, scriptPath, tokensPath,
@@ -267,6 +267,53 @@ public void tearDown() {
   }
 }
 
+private void cleanupUserAppCache(String user) throws IOException {
+  List<String> localDirs = dirsHandler.getLocalDirs();
+  for (String dir : localDirs) {
+    Path usercachedir = new Path(dir, ContainerLocalizer.USERCACHE);
+    Path userdir = new Path(usercachedir, user);
+    Path appcachedir = new Path(userdir, ContainerLocalizer.APPCACHE);
+    exec.deleteAsUser(user, appcachedir);
+    FileContext.getLocalFSFileContext().delete(usercachedir, true);
+  }
+}
+
+private void cleanupUserFileCache(String user) {
+  List<String> localDirs = dirsHandler.getLocalDirs();
+  for (String dir : localDirs) {
+    Path filecache = new Path(dir, ContainerLocalizer.FILECACHE);
+    Path filedir = new Path(filecache, user);
+    exec.deleteAsUser(user, filedir);
+  }
+}
+
+private void cleanupLogDirs(String user) {
+  List<String> logDirs = dirsHandler.getLogDirs();
+  for (String dir : logDirs) {
+    String appId = "APP_" + id;
+    String containerId = "CONTAINER_" + (id - 1);
+    Path appdir = new Path(dir, appId);
+    Path containerdir = new Path(appdir, containerId);
+    exec.deleteAsUser(user, containerdir);
+  }
+}
+
+private void cleanupAppFiles(String user) throws IOException {
+  cleanupUserAppCache(user);
+  cleanupUserFileCache(user);
+  cleanupLogDirs(user);
+
+  String[] files =
+          { "launch_container.sh", "container_tokens", "touch-file" };
+  Path ws = new Path(workSpace.toURI());
+  for (String file : files) {
+    File f = new File(workSpace, file);
+    if (f.exists()) {
+      exec.deleteAsUser(user, new Path(file), ws);
+    }
+  }
+}
+
 @Test
 public void testLaunchContainer() throws IOException {
   if (!shouldRun()) {
@@ -288,5 +335,9 @@ public void testLaunchContainer() throws IOException {
           FileContext.getLocalFSFileContext().getFileStatus(
                   new Path(touchFilePath));
   assertEquals(expectedRunAsUser, fileStatus.getOwner());
+  File f = new File(pidFile.toString());
+  assertTrue(f + " does not exist! ", f.exists());
+  cleanupAppFiles(expectedRunAsUser);
+
 }
 }
