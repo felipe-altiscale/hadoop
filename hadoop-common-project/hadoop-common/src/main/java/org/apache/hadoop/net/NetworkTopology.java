@@ -297,6 +297,7 @@ public class NetworkTopology {
      * @return
      */
     Node getLeaf(int leafIndex, Node excludedNode) {
+      LOG.debug("Children: " + children + " leafIndex " + leafIndex);
       int count=0;
       // check if the excluded node a leaf
       boolean isLeaf =
@@ -306,6 +307,7 @@ public class NetworkTopology {
         isLeaf ? 1 : ((InnerNode)excludedNode).getNumOfLeaves();
       if (isLeafParent()) { // children are leaves
         if (isLeaf) { // excluded node is a leaf node
+          LOG.debug("leaf node index: " + leafIndex);
           int excludedIndex = children.indexOf(excludedNode);
           if (excludedIndex != -1 && leafIndex >= 0) {
             // excluded node is one of the children so adjust the leaf index
@@ -314,6 +316,7 @@ public class NetworkTopology {
         }
         // range check
         if (leafIndex<0 || leafIndex>=this.getNumOfChildren()) {
+          LOG.debug("returning null leaf");
           return null;
         }
         return children.get(leafIndex);
@@ -731,7 +734,9 @@ public class NetworkTopology {
           "Failed to find datanode (scope=\"" + String.valueOf(scope) +
           "\" excludedScope=\"" + String.valueOf(excludedScope) + "\").");
     }
+
     int leaveIndex = r.nextInt(numOfDatanodes);
+    LOG.debug("num datanodes: " + numOfDatanodes + " returning leaf " + leaveIndex);
     return innerNode.getLeaf(leaveIndex, node);
   }
 

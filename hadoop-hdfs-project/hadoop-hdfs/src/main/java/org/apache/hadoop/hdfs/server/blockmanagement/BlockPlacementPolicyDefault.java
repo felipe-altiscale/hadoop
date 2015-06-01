@@ -521,6 +521,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     while(numOfReplicas > 0 && numOfAvailableNodes > 0) {
       DatanodeDescriptor chosenNode = 
           (DatanodeDescriptor)clusterMap.chooseRandom(scope);
+      if (chosenNode == null) {
+        throw new NotEnoughReplicasException("chosenNode is null for scope " + scope + " clusterMap " + clusterMap);
+      }
       if (excludedNodes.add(chosenNode)) { //was not in the excluded list
         numOfAvailableNodes--;
 
