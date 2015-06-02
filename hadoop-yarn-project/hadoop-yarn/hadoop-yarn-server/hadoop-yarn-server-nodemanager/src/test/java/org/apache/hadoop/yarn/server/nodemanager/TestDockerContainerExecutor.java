@@ -328,7 +328,7 @@ public void testLaunchContainer() throws IOException {
   String touchFileName = "touch-file-" + System.currentTimeMillis();
   String touchFilePath = workSpace.getAbsolutePath() + "/" + touchFileName;
   ContainerId cId = getNextContainerId();
-  int ret = runAndBlock(cId, env, "touch", touchFilePath);
+  int ret = runAndBlock(cId, env, "sleep", "2", "&&", "touch", touchFilePath);
 
   assertEquals(0, ret);
   FileStatus fileStatus =
