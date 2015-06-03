@@ -1092,7 +1092,9 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *container_id, const char *work_dir,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
-                              char* const* log_dirs, const char *command_file) {
+                              char* const* log_dirs, const char *command_file,
+                              const char *resources_key,
+                              char* const* resources_values) {
   int exit_code = -1;
   char *script_file_dest = NULL;
   char *cred_file_dest = NULL;
@@ -1136,6 +1138,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     goto cleanup;
   }
+
   exit_code_file = get_exit_code_file(pid_file);
   if (NULL == exit_code_file) {
     exit_code = OUT_OF_MEMORY;
@@ -1144,31 +1147,7 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     goto cleanup;
   }
 
-//  pid_t child_pid = fork();
-//    if (child_pid != 0) {
-//      // parent
-//      popen(docker_inspect_command)
-//      exit_code = wait_and_write_exit_code(child_pid, exit_code_file);
-//      fprintf(ERRORFILE, "Could not fork");
-//      fflush(ERRORFILE);
-//      goto cleanup;
-//    }
-//
-//    // setsid
-//    pid_t pid = setsid();
-//    if (pid == -1) {
-//      exit_code = SETSID_OPER_FAILED;
-//      fprintf(ERRORFILE, "Could not set sid");
-//      goto cleanup;
-//    }
-//
-//    // write pid to pidfile
-//    if (pid_file == NULL
-//        || write_pid_to_file_as_nm(pid_file, pid) != 0) {
-//      exit_code = WRITE_PIDFILE_FAILED;
-//      fprintf(ERRORFILE, "Could not write pid");
-//      goto cleanup;
-//    }
+
  // create the user directory on all disks
   int result = initialize_user(user, local_dirs);
   if (result != 0) {
@@ -1183,13 +1162,6 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     fflush(ERRORFILE);
     return log_create_result;
   }
-  // give up root privs
-//  if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
-//    fprintf(ERRORFILE, "Could not change users");
-//    fflush(ERRORFILE);
-//    exit_code = SETUID_OPER_FAILED;
-//    goto cleanup;
-//  }
 
   uid_t user_uid = geteuid();
   gid_t user_gid = getegid();
@@ -1273,6 +1245,20 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
     }
 
    if (pid != 0) {
+    // cgroups-based resource enforcement
+     if (resources_key != NULL && ! strcmp(resources_key, "cgroups")) {
+
+       // write pid to cgroups
+       char* const* cgroup_ptr;
+       for (cgroup_ptr = resources_values; cgroup_ptr != NULL &&
+            *cgroup_ptr != NULL; ++cgroup_ptr) {
+         if (strcmp(*cgroup_ptr, "none") != 0 &&
+               write_pid_to_cgroup_as_root(*cgroup_ptr, pid) != 0) {
+           exit_code = WRITE_CGROUP_FAILED;
+           goto cleanup;
+         }
+       }
+     }
     // write pid to pidfile
     if (pid_file == NULL
         || write_pid_to_file_as_nm(pid_file, (pid_t)pid) != 0) {
@@ -1311,6 +1297,11 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
   }
  exit_code = 0;
 cleanup:
+   if (exit_code_file != NULL && write_exit_code_file(exit_code_file, exit_code) < 0) {
+     fprintf (ERRORFILE,
+      "Could not write exit code to file %s.\n", exit_code_file);
+     fflush(ERRORFILE);
+   }
 #if HAVE_FCLOSEALL
   fcloseall();
 #else

@@ -226,6 +226,7 @@ public void testContainerLaunch() throws IOException {
 
   List<String> mockParams = readMockParams();
   mockParams.remove(mockParams.size() - 1);
+  mockParams.remove(mockParams.size() - 1);
   String realParams = Joiner.on(" ").join(mockParams);
   String expected = Joiner.on(" ").join(expectedParams);
   assertEquals(expected, realParams);

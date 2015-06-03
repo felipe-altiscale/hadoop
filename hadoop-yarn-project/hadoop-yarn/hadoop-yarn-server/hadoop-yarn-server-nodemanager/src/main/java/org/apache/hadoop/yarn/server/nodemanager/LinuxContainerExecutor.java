@@ -62,11 +62,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
   protected String containerExecutorExe;
-  private LCEResourcesHandler resourcesHandler;
+  protected LCEResourcesHandler resourcesHandler;
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
   private boolean containerLimitUsers;
-  private ResourceHandler resourceHandlerChain;
+  protected ResourceHandler resourceHandlerChain;
 
   @Override
   public void setConf(Configuration conf) {

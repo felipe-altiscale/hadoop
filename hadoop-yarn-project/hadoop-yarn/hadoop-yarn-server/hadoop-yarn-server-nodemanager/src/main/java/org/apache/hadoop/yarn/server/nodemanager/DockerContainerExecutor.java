@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainerLaunch;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
@@ -126,7 +128,54 @@ public int launchContainer(Container container,
   ContainerId containerId = container.getContainerId();
 
   String containerIdStr = ConverterUtils.toString(containerId);
+  resourcesHandler.preExecute(containerId,
+          container.getResource());
+  String resourcesOptions = resourcesHandler.getResourcesOption(
+          containerId);
+  String tcCommandFile = null;
+  try {
+    if (resourceHandlerChain != null) {
+      List<PrivilegedOperation> ops = resourceHandlerChain
+              .preStart(container);
 
+      if (ops != null) {
+        List<PrivilegedOperation> resourceOps = new ArrayList<>();
+
+        resourceOps.add(new PrivilegedOperation
+                (PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
+                        resourcesOptions));
+
+        for (PrivilegedOperation op : ops) {
+          switch (op.getOperationType()) {
+            case ADD_PID_TO_CGROUP:
+              resourceOps.add(op);
+              break;
+            case TC_MODIFY_STATE:
+              tcCommandFile = op.getArguments().get(0);
+              break;
+            default:
+              LOG.warn("PrivilegedOperation type unsupported in launch: "
+                      + op.getOperationType());
+          }
+        }
+
+        if (resourceOps.size() > 1) {
+          //squash resource operations
+          try {
+            PrivilegedOperation operation = PrivilegedOperationExecutor
+                    .squashCGroupOperations(resourceOps);
+            resourcesOptions = operation.getArguments().get(0);
+          } catch (PrivilegedOperationException e) {
+            LOG.error("Failed to squash cgroup operations!", e);
+            throw new ResourceHandlerException("Failed to squash cgroup operations!");
+          }
+        }
+      }
+    }
+  } catch (ResourceHandlerException e) {
+    LOG.error("ResourceHandlerChain.preStart() failed!", e);
+    throw new IOException("ResourceHandlerChain.preStart() failed!");
+  }
   Path launchDst =
           new Path(containerWorkDir, ContainerLaunch.CONTAINER_SCRIPT);
   List<String> localWithWorkDir = new ArrayList<>(localDirs);
@@ -167,6 +216,7 @@ public int launchContainer(Container container,
             StringUtils.join(",", localDirs),
             StringUtils.join(",", logDirs)));
     launchDocker.add(commandFilePath);
+    launchDocker.add(resourcesOptions);
     shExec = new ShellCommandExecutor(launchDocker.toArray(new String[launchDocker.size()])
             , null, // NM's cwd
             container.getLaunchContext().getEnvironment()); // sanitized env

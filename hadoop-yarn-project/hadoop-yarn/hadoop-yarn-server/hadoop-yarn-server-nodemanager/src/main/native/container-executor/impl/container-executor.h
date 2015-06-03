@@ -119,7 +119,8 @@ int launch_docker_container_as_user(const char * user, const char *app_id,
                               const char *script_name, const char *cred_file,
                               const char *pid_file, char* const* local_dirs,
                               char* const* log_dirs,
-                              const char *command_file);
+                              const char *command_file,const char *resources_key,
+                              char* const* resources_values);
 
 /*
  * Function used to launch a container as the provided user. It does the following :
