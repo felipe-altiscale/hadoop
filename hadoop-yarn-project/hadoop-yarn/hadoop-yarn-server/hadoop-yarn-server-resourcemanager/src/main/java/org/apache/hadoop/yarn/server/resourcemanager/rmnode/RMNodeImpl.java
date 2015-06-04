@@ -166,6 +166,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenRunningTransition())
+     .addTransition(NodeState.RUNNING, NodeState.SHUTDOWN,
+         RMNodeEventType.SHUTDOWN,
+         new DeactivateNodeTransition(NodeState.SHUTDOWN))
 
      //Transitions from REBOOTED state
      .addTransition(NodeState.REBOOTED, NodeState.REBOOTED,
@@ -211,6 +214,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.RESOURCE_UPDATE, new UpdateNodeResourceWhenUnusableTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
+         RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+         new AddContainersToBeRemovedFromNMTransition())
+     .addTransition(NodeState.UNHEALTHY, NodeState.SHUTDOWN,
+         RMNodeEventType.SHUTDOWN,
+         new DeactivateNodeTransition(NodeState.SHUTDOWN))
+
+     //Transitions from SHUTDOWN state
+     .addTransition(NodeState.SHUTDOWN, NodeState.SHUTDOWN,
+         RMNodeEventType.RESOURCE_UPDATE,
+         new UpdateNodeResourceWhenUnusableTransition())
+     .addTransition(NodeState.SHUTDOWN, NodeState.SHUTDOWN,
          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
          new AddContainersToBeRemovedFromNMTransition())
 
@@ -448,6 +462,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
       break;
+    case SHUTDOWN:
+      metrics.decrNumShutdownNMs();
+      break;
     default:
       LOG.debug("Unexpected previous node state");    
     }
@@ -480,6 +497,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       break;
     case UNHEALTHY:
       metrics.incrNumUnhealthyNMs();
+      break;
+    case SHUTDOWN:
+      metrics.incrNumShutdownNMs();
       break;
     default:
       LOG.debug("Unexpected final state");
