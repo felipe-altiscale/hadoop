@@ -51,6 +51,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -429,6 +431,50 @@ public class ResourceTrackerService extends AbstractService implements
             remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
 
     return nodeHeartBeatResponse;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public UnRegisterNodeManagerResponse unRegisterNodeManager(
+      UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+    UnRegisterNodeManagerResponse response = recordFactory
+        .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    NodeId nodeId = request.getNodeId();
+    RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
+    if (rmNode == null) {
+      LOG.info("Node not found, ignoring the unregister from node id : "
+          + nodeId);
+      return response;
+    }
+    LOG.info("Node with node id : " + nodeId
+        + " has shutdown, hence unregistering the node.");
+    this.nmLivelinessMonitor.unregister(nodeId);
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMNodeEvent(nodeId, RMNodeEventType.SHUTDOWN));
+    return response;
+  }
+
+  private void updateNodeLabelsFromNMReport(Set<String> nodeLabels,
+      NodeId nodeId) throws IOException {
+    try {
+      Map<NodeId, Set<String>> labelsUpdate =
+          new HashMap<NodeId, Set<String>>();
+      labelsUpdate.put(nodeId, nodeLabels);
+      this.rmContext.getNodeLabelManager().replaceLabelsOnNode(labelsUpdate);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Node Labels {" + StringUtils.join(",", nodeLabels)
+            + "} from Node " + nodeId + " were Accepted from RM");
+      }
+    } catch (IOException ex) {
+      StringBuilder errorMessage = new StringBuilder();
+      errorMessage.append("Node Labels {")
+          .append(StringUtils.join(",", nodeLabels))
+          .append("} reported from NM with ID ").append(nodeId)
+          .append(" was rejected from RM with exception message as : ")
+          .append(ex.getMessage());
+      LOG.error(errorMessage, ex);
+      throw new IOException(errorMessage.toString(), ex);
+    }
   }
 
   private void populateKeys(NodeHeartbeatRequest request,
