@@ -1015,6 +1015,9 @@ Release 2.7.1 - 2015-07-06
     HDFS-8344. NameNode doesn't recover lease for files with missing blocks
     (raviprak)
 
+    HDFS-8337. Accessing httpfs via webhdfs doesn't work from a jar with
+    kerberos. (Yongjun Zhang)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
