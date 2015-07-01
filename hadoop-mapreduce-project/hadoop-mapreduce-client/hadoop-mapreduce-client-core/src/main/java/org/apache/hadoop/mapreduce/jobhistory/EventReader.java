@@ -66,23 +66,16 @@ public class EventReader implements Closeable {
   public EventReader(DataInputStream in) throws IOException {
     this.in = in;
     this.version = in.readLine();
-    
-    if (!EventWriter.VERSION.equals(version)) {
-      throw new IOException("Incompatible event log version: "+version);
-    }
 
     Schema myschema = new SpecificData(Event.class.getClassLoader()).getSchema(Event.class);
-    String eventschema = in.readLine();
-    if (null != eventschema) {
-      try {
-        this.schema = Schema.parse(eventschema);
-        this.reader = new SpecificDatumReader(schema, myschema);
-        this.decoder = DecoderFactory.get().jsonDecoder(schema, in);
-      } catch (AvroRuntimeException e) {
-        throw new IOException(e);
-      }
+    this.schema = Schema.parse(in.readLine());
+    this.reader = new SpecificDatumReader(schema, myschema);
+    if (EventWriter.VERSION.equals(version)) {
+      this.decoder = DecoderFactory.get().jsonDecoder(schema, in);
+    } else if (EventWriter.VERSION_BINARY.equals(version)) {
+      this.decoder = DecoderFactory.get().binaryDecoder(in, null);
     } else {
-      throw new IOException("Event schema string not parsed since its null");
+      throw new IOException("Incompatible event log version: " + version);
     }
   }
   
