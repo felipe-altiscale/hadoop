@@ -804,6 +804,9 @@ Release 2.7.2 - 2016-01-25
 
   BUG FIXES
 
+    HDFS-2956. calling fetchdt without a --renewer argument throws NPE
+    (vinayakumarb)
+
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
 
