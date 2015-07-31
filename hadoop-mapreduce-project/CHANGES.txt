@@ -48,6 +48,8 @@ Release 2.7.1 - 2015-06-28
     MAPREDUCE-6410. Fixed MapReduce JobHistory server to use the right (login)
     UGI to refresh log and cleaner settings. (Varun Saxena via vinodkv)
 
+    MAPREDUCE-6433. launchTime may be negative. (Zhihai Xu)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES

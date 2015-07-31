@@ -71,6 +71,7 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
+import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 
 import com.google.common.annotations.VisibleForTesting;
 /**
