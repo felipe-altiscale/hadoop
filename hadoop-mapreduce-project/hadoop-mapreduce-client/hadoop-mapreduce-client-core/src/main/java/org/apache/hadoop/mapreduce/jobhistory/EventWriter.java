@@ -29,15 +29,11 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.util.Utf8;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Event Writer is an utility class used to write events to the underlying
@@ -45,9 +41,7 @@ import com.google.common.annotations.VisibleForTesting;
  * is created per job 
  * 
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class EventWriter {
+class EventWriter {
   static final String VERSION = "Avro-Json";
   static final String VERSION_BINARY = "Avro-Binary";
 
@@ -56,17 +50,11 @@ public class EventWriter {
     new SpecificDatumWriter<Event>(Event.class);
   private Encoder encoder;
   private static final Log LOG = LogFactory.getLog(EventWriter.class);
-
-  /**
-   * avro encoding format supported by EventWriter.
-   */
   public enum WriteMode { JSON, BINARY }
   private final WriteMode writeMode;
   private final boolean jsonOutput;  // Cache value while we have 2 modes
 
-  @VisibleForTesting
-  public EventWriter(FSDataOutputStream out, WriteMode mode)
-      throws IOException {
+  EventWriter(FSDataOutputStream out, WriteMode mode) throws IOException {
     this.out = out;
     this.writeMode = mode;
     if (this.writeMode==WriteMode.JSON) {
@@ -105,8 +93,7 @@ public class EventWriter {
     out.hflush();
   }
 
-  @VisibleForTesting
-  public void close() throws IOException {
+  void close() throws IOException {
     try {
       encoder.flush();
       out.close();
