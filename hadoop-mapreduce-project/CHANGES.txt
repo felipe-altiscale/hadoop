@@ -21,8 +21,6 @@ Release 2.7.1 - 2015-06-28
   IMPROVEMENTS
 
   OPTIMIZATIONS
-    MAPREDUCE-6376. Add avro binary support for jhist files (Ray Chiang via
-    jlowe)
 
   BUG FIXES
 
