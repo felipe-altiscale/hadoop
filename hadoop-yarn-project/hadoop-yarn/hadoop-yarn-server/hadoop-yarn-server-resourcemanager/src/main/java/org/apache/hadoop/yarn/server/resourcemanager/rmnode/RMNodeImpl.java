@@ -121,7 +121,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       new HashSet<ContainerId>();
 
   /* the list of applications that have finished and need to be purged */
-  private final List<ApplicationId> finishedApplications = new ArrayList<ApplicationId>();
+  private final List<ApplicationId> finishedApplications =
+      new ArrayList<ApplicationId>();
+
+  /* the list of applications that are running on this node */
+  private final List<ApplicationId> runningApplications =
+      new ArrayList<ApplicationId>();
 
   private NodeHeartbeatResponse latestNodeHeartBeatResponse = recordFactory
       .newRecordInstance(NodeHeartbeatResponse.class);
@@ -433,7 +438,17 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
   
   @Override
-  public List<ContainerId> getContainersToCleanUp() {
+  public List<ApplicationId> getRunningApps() {
+    this.readLock.lock();
+    try {
+      return new ArrayList<ApplicationId>(this.runningApplications);
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+   public List<ContainerId> getContainersToCleanUp() {
 
     this.readLock.lock();
 
@@ -572,9 +587,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       LOG.warn("Cannot get RMApp by appId=" + appId
           + ", just added it to finishedApplications list for cleanup");
       rmNode.finishedApplications.add(appId);
+      rmNode.runningApplications.remove(appId);
       return;
     }
 
+    // Add running applications back due to Node add or Node reconnection.
+    rmNode.runningApplications.add(appId);
     context.getDispatcher().getEventHandler()
         .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
   }
@@ -764,8 +782,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     @Override
     public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
-      rmNode.finishedApplications.add(((
-          RMNodeCleanAppEvent) event).getAppId());
+      ApplicationId appId = ((RMNodeCleanAppEvent) event).getAppId();
+      rmNode.finishedApplications.add(appId);
+      rmNode.runningApplications.remove(appId);
     }
   }
 
@@ -816,7 +835,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     rmNode.context.getRMNodes().remove(rmNode.nodeId);
     LOG.info("Deactivating Node " + rmNode.nodeId + " as it is now "
         + finalState);
-    rmNode.context.getInactiveRMNodes().put(rmNode.nodeId, rmNode);
+    rmNode.context.getInactiveRMNodes().put(rmNode.nodeId.getHost(), rmNode);
   }
 
   /**
@@ -1038,12 +1057,22 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             + "cleanup, no further processing");
         continue;
       }
-      if (finishedApplications.contains(containerId.getApplicationAttemptId()
-          .getApplicationId())) {
+
+      ApplicationId containerAppId =
+          containerId.getApplicationAttemptId().getApplicationId();
+
+      if (finishedApplications.contains(containerAppId)) {
         LOG.info("Container " + containerId
             + " belongs to an application that is already killed,"
             + " no further processing");
         continue;
+      } else if (!runningApplications.contains(containerAppId)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Container " + containerId
+              + " is the first container get launched for application "
+              + containerAppId);
+        }
+        runningApplications.add(containerAppId);
       }
 
       // Process running containers
