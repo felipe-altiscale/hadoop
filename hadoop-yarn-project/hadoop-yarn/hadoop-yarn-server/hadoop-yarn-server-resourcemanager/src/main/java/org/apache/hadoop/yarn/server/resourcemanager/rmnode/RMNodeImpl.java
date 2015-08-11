@@ -514,6 +514,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
       break;
+    case SHUTDOWN:
+      metrics.decrNumShutdownNMs();
+      break;
     default:
       LOG.debug("Unexpected previous node state");    
     }
@@ -532,6 +535,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       break;
     case UNHEALTHY:
       metrics.decrNumUnhealthyNMs();
+      break;
+    case SHUTDOWN:
+      metrics.incrNumShutdownNMs();
       break;
     default:
       LOG.debug("Unexpected inital state");

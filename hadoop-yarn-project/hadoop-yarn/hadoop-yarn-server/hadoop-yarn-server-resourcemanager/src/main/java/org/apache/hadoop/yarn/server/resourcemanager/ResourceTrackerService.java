@@ -52,6 +52,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UnRegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
@@ -109,7 +111,7 @@ public class ResourceTrackerService extends AbstractService implements
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
-      NMLivelinessMonitor nmLivelinessMonitor,
+                                NMLivelinessMonitor nmLivelinessMonitor,
       RMContainerTokenSecretManager containerTokenSecretManager,
       NMTokenSecretManagerInRM nmTokenSecretManager) {
     super(ResourceTrackerService.class.getName());
@@ -135,8 +137,8 @@ public class ResourceTrackerService extends AbstractService implements
             YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS);
     if (nextHeartBeatInterval <= 0) {
       throw new YarnRuntimeException("Invalid Configuration. "
-          + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS
-          + " should be larger than 0.");
+              + YarnConfiguration.RM_NM_HEARTBEAT_INTERVAL_MS
+              + " should be larger than 0.");
     }
 
     minAllocMb = conf.getInt(
@@ -173,18 +175,18 @@ public class ResourceTrackerService extends AbstractService implements
       InputStream inputStream =
           this.rmContext.getConfigurationProvider()
               .getConfigurationInputStream(conf,
-                  YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
+                      YarnConfiguration.HADOOP_POLICY_CONFIGURATION_FILE);
       if (inputStream != null) {
         conf.addResource(inputStream);
       }
       refreshServiceAcls(conf, RMPolicyProvider.getInstance());
     }
- 
+
     this.server.start();
     conf.updateConnectAddr(YarnConfiguration.RM_BIND_HOST,
 			   YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
 			   YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
-                           server.getListenerAddress());
+            server.getListenerAddress());
   }
 
   @Override
@@ -314,8 +316,8 @@ public class ResourceTrackerService extends AbstractService implements
       LOG.info("Reconnect from the node at: " + host);
       this.nmLivelinessMonitor.unregister(nodeId);
       this.rmContext
-          .getDispatcher()
-          .getEventHandler()
+              .getDispatcher()
+              .getEventHandler()
           .handle(
               new RMNodeReconnectEvent(nodeId, rmNode, request
                   .getRunningApplications(), request.getNMContainerStatuses()));
@@ -432,6 +434,27 @@ public class ResourceTrackerService extends AbstractService implements
             remoteNodeStatus.getKeepAliveApplications(), nodeHeartBeatResponse));
 
     return nodeHeartBeatResponse;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public UnRegisterNodeManagerResponse unRegisterNodeManager(
+      UnRegisterNodeManagerRequest request) throws YarnException, IOException {
+    UnRegisterNodeManagerResponse response = recordFactory
+        .newRecordInstance(UnRegisterNodeManagerResponse.class);
+    NodeId nodeId = request.getNodeId();
+    RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
+    if (rmNode == null) {
+      LOG.info("Node not found, ignoring the unregister from node id : "
+          + nodeId);
+      return response;
+    }
+    LOG.info("Node with node id : " + nodeId
+        + " has shutdown, hence unregistering the node.");
+    this.nmLivelinessMonitor.unregister(nodeId);
+    this.rmContext.getDispatcher().getEventHandler()
+        .handle(new RMNodeEvent(nodeId, RMNodeEventType.SHUTDOWN));
+    return response;
   }
 
   /**
