@@ -925,6 +925,10 @@ Release 2.7.1 - 2015-07-06
 
     HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
 
+    HDFS-6407. Add sorting and pagination in the datanode tab of the NN Web UI.
+    (wheat9)
+
+
   OPTIMIZATIONS
 
   BUG FIXES
