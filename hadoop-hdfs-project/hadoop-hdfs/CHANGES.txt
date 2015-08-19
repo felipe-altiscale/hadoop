@@ -392,6 +392,8 @@ Release 2.7.1 - 2015-07-06
     HDFS-7779. Improve the HDFS Web UI browser to allow chowning / chgrp and 
     setting replication (Ravi Prakash)
 
+    HDFS-8435. Support CreateFlag in WebHDFS. (Jakob Homan via cdouglas)
+
   OPTIMIZATIONS
 
   BUG FIXES
