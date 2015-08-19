@@ -59,6 +59,11 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
    */
   private BlockInfoContiguous truncateBlock;
 
+  /** The number of times all replicas will be used to attempt recovery before
+   * giving up and marking the block under construction missing.
+   */
+  private int recoveryAttemptsBeforeMarkingBlockMissing = 5;
+
   /**
    * ReplicaUnderConstruction contains information about replicas while
    * they are under construction.
@@ -309,7 +314,7 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
     if (replicas.size() == 0) {
       NameNode.blockStateChangeLog.warn("BLOCK*"
         + " BlockInfoUnderConstruction.initLeaseRecovery:"
-        + " No blocks found, lease removed.");
+        + " No replicas found.");
     }
     boolean allLiveReplicasTriedAsPrimary = true;
     for (int i = 0; i < replicas.size(); i++) {
@@ -320,6 +325,11 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
       }
     }
     if (allLiveReplicasTriedAsPrimary) {
+      recoveryAttemptsBeforeMarkingBlockMissing--;
+      NameNode.blockStateChangeLog.info("Tried to recover " + this +" using all"
+          + " replicas. Will try " + recoveryAttemptsBeforeMarkingBlockMissing
+          + " more times");
+
       // Just set all the replicas to be chosen whether they are alive or not.
       for (int i = 0; i < replicas.size(); i++) {
         replicas.get(i).setChosenAsPrimary(false);
@@ -380,6 +390,10 @@ public class BlockInfoContiguousUnderConstruction extends BlockInfoContiguous {
       }
       replicas.add(new ReplicaUnderConstruction(block, storage, rState));
     }
+  }
+
+  public int getNumRecoveryAttemptsLeft() {
+    return recoveryAttemptsBeforeMarkingBlockMissing;
   }
 
   @Override // BlockInfo

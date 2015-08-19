@@ -744,7 +744,8 @@ public class BlockManager {
   /**
    * Force the given block in the given file to be marked as complete,
    * regardless of whether enough replicas are present. This is necessary
-   * when tailing edit logs as a Standby.
+   * when tailing edit logs as a Standby or when recovering a lease on a file
+   * with missing blocks.
    */
   public BlockInfoContiguous forceCompleteBlock(final BlockCollection bc,
       final BlockInfoContiguousUnderConstruction block) throws IOException {
