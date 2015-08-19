@@ -875,6 +875,9 @@ Release 2.7.1 - 2015-07-06
     HDFS-8681. BlockScanner is incorrectly disabled by default.
     (Arpit Agarwal)
 
+    HDFS-8344. NameNode doesn't recover lease for files with missing blocks
+    (raviprak)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
