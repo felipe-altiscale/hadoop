@@ -214,6 +214,7 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   display: none;
 }
 
+<<<<<<< HEAD
 .bar rect {
     fill: #5FA33F;
 }
@@ -222,3 +223,5 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     fill: #fff;
     font: 10px sans-serif;
 }
+.explorer-entry .explorer-browse-links { cursor: pointer; }
+.explorer-entry .glyphicon-trash { cursor: pointer; }
