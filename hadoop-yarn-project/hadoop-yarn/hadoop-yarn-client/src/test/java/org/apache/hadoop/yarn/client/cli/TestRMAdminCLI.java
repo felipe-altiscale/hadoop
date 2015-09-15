@@ -175,7 +175,6 @@ public class TestRMAdminCLI {
     assertEquals(0, rmAdminCLI.run(args));
     verify(admin).refreshNodes(any(RefreshNodesRequest.class));
   }
-  
   @Test(timeout=500)
   public void testGetGroups() throws Exception {
     when(admin.getGroupsForUser(eq("admin"))).thenReturn(
@@ -289,7 +288,8 @@ public class TestRMAdminCLI {
               "[-refreshAdminAcls] [-refreshServiceAcl] [-getGroup" +
               " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
               " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
-              "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] " +
+              "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] [-updateNodeResource " +
+              "[NodeID] [MemSize] [vCores] ([OvercommitTimeout])" +
               "[-help [cmd]]"));
       assertTrue(dataOut
           .toString()
@@ -300,6 +300,11 @@ public class TestRMAdminCLI {
           .toString()
           .contains(
               "-refreshNodes: Refresh the hosts information at the " +
+              "ResourceManager."));
+      assertTrue(dataOut
+          .toString()
+          .contains(
+              "-refreshNodesResources: Refresh resources of NodeManagers at the " +
               "ResourceManager."));
       assertTrue(dataOut.toString().contains(
           "-refreshUserToGroupsMappings: Refresh user-to-groups mappings"));
@@ -370,6 +375,7 @@ public class TestRMAdminCLI {
               " [username]] [[-addToClusterNodeLabels [label1,label2,label3]]" +
               " [-removeFromClusterNodeLabels [label1,label2,label3]] [-replaceLabelsOnNode " +
               "[node1[:port]=label1,label2 node2[:port]=label1] [-directlyAccessNodeLabelStore]] " +
+              "[-updateNodeResource [NodeID] [MemSize] [vCores] ([OvercommitTimeout]) " +
               "[-transitionToActive [--forceactive] <serviceId>] " + 
               "[-transitionToStandby <serviceId>] [-failover" +
               " [--forcefence] [--forceactive] <serviceId> <serviceId>] " +

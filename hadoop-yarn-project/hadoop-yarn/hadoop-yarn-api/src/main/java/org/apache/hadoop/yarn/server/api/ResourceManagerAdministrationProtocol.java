@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeRequ
 import org.apache.hadoop.yarn.server.api.protocolrecords.ReplaceLabelsOnNodeResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RefreshNodesResourcesResponse;
 
 @Private
 @Stable
@@ -78,7 +80,7 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Public
   @Stable
   @Idempotent
-  public RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
+  RefreshUserToGroupsMappingsResponse refreshUserToGroupsMappings(
       RefreshUserToGroupsMappingsRequest request)
   throws StandbyException, YarnException, IOException;
 
@@ -114,11 +116,15 @@ public interface ResourceManagerAdministrationProtocol extends GetUserMappingsPr
   @Evolving
   @Idempotent
   public UpdateNodeResourceResponse updateNodeResource(
-      UpdateNodeResourceRequest request) 
-  throws YarnException, IOException;
-   
-  @Public
+      UpdateNodeResourceRequest request) throws YarnException, IOException;
+
+  @Private
   @Evolving
+  @Idempotent
+  public RefreshNodesResourcesResponse refreshNodesResources(
+      RefreshNodesResourcesRequest request) throws YarnException, IOException;
+
+  @Private
   @Idempotent
   public AddToClusterNodeLabelsResponse addToClusterNodeLabels(AddToClusterNodeLabelsRequest request)
       throws YarnException, IOException;
