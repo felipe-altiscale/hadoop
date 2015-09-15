@@ -213,3 +213,6 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
   margin-top:20px;
   display: none;
 }
+
+.explorer-entry .explorer-browse-links { cursor: pointer; }
+.explorer-entry .glyphicon-trash { cursor: pointer; }

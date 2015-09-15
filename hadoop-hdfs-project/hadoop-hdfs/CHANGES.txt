@@ -370,6 +370,9 @@ Release 2.7.1 - 2015-07-06
 
     HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
 
+    HDFS-7986. Allow files / directories to be deleted from the NameNode UI.
+    (Ravi Prakash via wheat9)
+
   OPTIMIZATIONS
 
   BUG FIXES
