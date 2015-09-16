@@ -47,6 +47,9 @@ Release 2.7.1 - 2015-06-28
     HDFS-7986. Allow files / directories to be deleted from the NameNode UI.
     (Ravi Prakash via wheat9)
 
+    HDFS-7995. Implement chmod in the HDFS Web UI.
+    (Ravi Prakash and Haohui Mai via wheat9)
+
   OPTIMIZATIONS
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using
     hard-links to preserve old edit logs, instead of copying them. (Zhe Zhang
