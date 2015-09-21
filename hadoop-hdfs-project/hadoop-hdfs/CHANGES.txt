@@ -68,6 +68,10 @@ Release 2.7.1 - 2015-06-28
 
     HDFS-8435. Support CreateFlag in WebHDFS. (Jakob Homan via cdouglas)
 
+    HDFS-7766. Add a flag to WebHDFS op=CREATE to not respond with a 307 redirect
+    Altiscale Proprietary feature for now. Please do not use (in case we drop
+    support for this later). (Ravi Prakash)
+
   OPTIMIZATIONS
     HDFS-8480. Fix performance and timeout issues in HDFS-7929 by using
     hard-links to preserve old edit logs, instead of copying them. (Zhe Zhang
