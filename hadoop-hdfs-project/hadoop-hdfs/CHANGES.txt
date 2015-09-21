@@ -381,6 +381,7 @@ Release 2.7.1 - 2015-07-06
     HDFS-6407. Add sorting and pagination in the datanode tab of the NN Web UI.
     (wheat9)
 
+    HDFS-8816. Improve visualization for the Datanode tab in the NN UI. (wheat9)
 
   OPTIMIZATIONS
 
