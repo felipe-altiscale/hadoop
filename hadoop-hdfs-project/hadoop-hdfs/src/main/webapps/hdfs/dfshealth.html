@@ -258,6 +258,14 @@
 <div class="page-header"><h1>Datanode Information</h1></div>
 <div class="page-header"><h1><small>Datanode usage histogram</small></h1></div>
 <small><div id="datanode-usage-histogram"></div></small>
+<div>
+  <ul class="dfshealth-node-legend">
+    <li class="dfshealth-node-icon dfshealth-node-alive">In service</li>
+    <li class="dfshealth-node-icon dfshealth-node-down">Down</li>
+    <li class="dfshealth-node-icon dfshealth-node-decommisioned">Decommisioned</li>
+    <li class="dfshealth-node-icon dfshealth-node-down-decommisioned">Decommissioned &amp; dead</li>
+  </ul>
+</div>
 <div class="page-header"><h1><small>In operation</small></h1></div>
 <small>
 <table class="table" id="table-datanodes">
@@ -265,14 +273,9 @@
     <tr>
       <th>Node</th>
       <th>Last contact</th>
-      <th>Admin State</th>
-      <th>Capacity</th>
-      <th>Used</th>
-      <th>Non DFS Used</th>
-      <th>Remaining</th>
+      <th style="width:180px; text-align:center">Capacity</th>
       <th>Blocks</th>
       <th>Block pool used</th>
-      <th>Failed Volumes</th>
       <th>Version</th>
     </tr>
   </thead>
@@ -307,7 +310,7 @@
 </table>
 </small>
 
-<div class="page-header"><h1><small>Decomissioning</small></h1></div>
+<div class="page-header"><h1><small>Decommissioning</small></h1></div>
 <small>
 <table class="table">
   <thead>
