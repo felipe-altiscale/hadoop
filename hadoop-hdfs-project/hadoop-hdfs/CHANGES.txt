@@ -386,6 +386,12 @@ Release 2.7.1 - 2015-07-06
     HDFS-9084. Pagination, sorting and filtering of files/directories in the 
     HDFS Web UI (Ravi Prakash)
 
+    HDFS-7796. Include X-editable for slick contenteditable fields in the web UI
+    (Ravi Prakash)
+
+    HDFS-7779. Improve the HDFS Web UI browser to allow chowning / chgrp and 
+    setting replication (Ravi Prakash)
+
   OPTIMIZATIONS
 
   BUG FIXES
