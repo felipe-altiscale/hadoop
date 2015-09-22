@@ -945,6 +945,9 @@ Release 2.7.1 - 2015-07-06
     Altiscale Proprietary feature for now. Please do not use (in case we drop
     support for this later). (Ravi Prakash)
 
+    HDFS-8678. Bring back the feature to view chunks of files in the HDFS file 
+    browser (Ravi Prakash)
+
   OPTIMIZATIONS
 
   BUG FIXES
