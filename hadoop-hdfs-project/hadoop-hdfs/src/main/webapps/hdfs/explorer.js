@@ -362,5 +362,39 @@
     });
   })
 
+  $('#modal-upload-file-button').click(function() {
+    $(this).prop('disabled', true);
+    $(this).button('complete');
+
+    for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
+      var file = $('#modal-upload-file-input').prop('files')[i];
+      var url = '/webhdfs/v1' + current_directory + file.name + '?op=CREATE&noredirect=true';
+
+      $.ajax({
+        type: 'PUT',
+        url: url,
+        processData: false,
+        crossDomain: true
+      }).done(function(data) {
+        url = data.Location;
+        $.ajax({
+          type: 'PUT',
+          url: url,
+          data: file,
+          processData: false,
+          crossDomain: true
+        }).complete(function(data) {
+          $('#modal-upload-file').modal('hide');
+          $('#modal-upload-file-button').button('reset');
+          browse_directory(current_directory);
+        }).error(function(jqXHR, textStatus, errorThrown) {
+          show_err_msg("Couldn't upload the file. " + errorThrown);
+        });
+      }).error(function(jqXHR, textStatus, errorThrown) {
+        show_err_msg("Couldn't find datanode to write file. " + errorThrown);
+      });
+    }
+  });
+
   init();
 })();
