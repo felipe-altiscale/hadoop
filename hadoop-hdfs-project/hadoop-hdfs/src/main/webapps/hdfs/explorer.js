@@ -194,10 +194,34 @@
       $('#file-info-preview').click(function() {
         var offset = d.fileLength - TAIL_CHUNK_SIZE;
         var url = offset > 0 ? download_url + '&offset=' + offset : download_url;
-        $.get(url, function(t) {
-          $('#file-info-preview-body').val(t);
-          $('#file-info-tail').show();
-        }, "text").error(network_error_handler(url));
+        url += "&noredirect=true";
+        $.ajax({
+          type: 'GET',
+          url: url,
+          processData: false,
+          crossDomain: true
+        }).done(function(data) {
+          url = data.Location;
+          $.ajax({
+            type: 'GET',
+            url: url,
+            processData: false,
+            crossDomain: true
+          }).complete(function(data) {
+            $('#file-info-preview-body').val(data.responseText);
+            $('#file-info-tail').show();
+          }).error(function(jqXHR, textStatus, errorThrown) {
+            show_err_msg("Couldn't preview the file. " + errorThrown);
+          });
+        }).error(function(jqXHR, textStatus, errorThrown) {
+          show_err_msg("Couldn't find datanode to read file from. " + errorThrown);
+        });
+        
+//        $.get(url, 
+//          function(t) {
+//          $('#file-info-preview-body').val(t);
+//          $('#file-info-tail').show();
+//        }, "text").error(network_error_handler(url));
       });
 
       if (d.fileLength > 0) {
@@ -368,7 +392,9 @@
 
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       var file = $('#modal-upload-file-input').prop('files')[i];
-      var url = '/webhdfs/v1' + current_directory + file.name + '?op=CREATE&noredirect=true';
+      var url = '/webhdfs/v1' + current_directory;
+      url = encode_path(append_path(url, file.name));
+      url += '?op=CREATE&noredirect=true';
 
       $.ajax({
         type: 'PUT',

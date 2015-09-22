@@ -286,3 +286,12 @@ header.bs-docs-nav, header.bs-docs-nav .navbar-brand {
     font-weight: normal;
     cursor: pointer;
 }
+
+span.align-left { 
+  width:50%; 
+  display:inline-block; 
+}
+
+span.align-right {
+  text-align: right;
+}
