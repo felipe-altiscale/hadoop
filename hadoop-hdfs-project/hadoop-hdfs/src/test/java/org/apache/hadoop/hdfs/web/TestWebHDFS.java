@@ -55,7 +55,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
-import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
@@ -457,7 +456,7 @@ public class TestWebHDFS {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
-      webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(conf, "webhdfs");
 
       TestFileCreation.testFileCreationNonRecursive(webHdfs);
 
