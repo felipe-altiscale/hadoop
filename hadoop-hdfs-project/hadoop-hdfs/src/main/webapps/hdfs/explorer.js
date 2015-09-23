@@ -306,7 +306,9 @@
 
         $('#table-explorer').dataTable( {
             'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+            'aaSorting': [7,'asc'],
             'columns': [
+              { 'orderable' : false }, //select
               { 'searchable': false }, //Permissions
               null, //Owner
               null, //Group
@@ -314,7 +316,7 @@
               { 'searchable': false, 'render': func_time_render}, //Last Mod
               { 'searchable': false }, //Replication
               null, //Name
-              { 'sortable' : false } //Trash
+              { 'orderable' : false } //Trash
             ]
         });
 
@@ -420,6 +422,50 @@
         show_err_msg("Couldn't find datanode to write file. " + errorThrown);
       });
     }
+  });
+
+  //Store the list of files which have been checked into session storage
+  function store_selected_files(current_directory) {
+    sessionStorage.setItem("source_directory", current_directory);
+    var selected_files = $("input:checked.file_selector");
+    var selected_file_names = new Array();
+    selected_files.each(function(index) {
+      selected_file_names[index] = $(this).closest('tr').attr('inode-path');
+    })
+    sessionStorage.setItem("selected_file_names", JSON.stringify(selected_file_names));
+    alert("Cut " + files.length + " files/directories");
+  }
+
+  //Retrieve the list of files from session storage and rename them to the current
+  //directory
+  function paste_selected_files() {
+    var files = JSON.parse(sessionStorage.getItem("selected_file_names"));
+    var source_directory = sessionStorage.getItem("source_directory");
+    $.each(files, function(index, value) {
+      var url = "/webhdfs/v1"
+        + encode_path(append_path(source_directory, value))
+        + '?op=RENAME&destination=' 
+        + encode_path(append_path(current_directory, value));
+      $.ajax({
+        type: 'PUT',
+        url: url
+      }).done(function(data) {
+        if(index == files.length - 1) {
+          browse_directory(current_directory);
+        }
+      }).error(function(jqXHR, textStatus, errorThrown) {
+        show_err_msg("Couldn't move file " + value + ". " + errorThrown);
+      });
+
+    })
+  }
+
+  $('#explorer-cut').click(function() {
+    store_selected_files(current_directory);
+  });
+
+  $('#explorer-paste').click(function() {
+    paste_selected_files()
   });
 
   init();
