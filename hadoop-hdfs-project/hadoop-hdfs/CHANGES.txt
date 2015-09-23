@@ -811,6 +811,8 @@ Release 2.7.1 - 2015-07-06
     HDFS-8678. Bring back the feature to view chunks of files in the HDFS file 
     browser (Ravi Prakash)
 
+    HDFS-7987. Allow files / directories to be moved (Ravi Prakash)
+
   OPTIMIZATIONS
 
   BUG FIXES
