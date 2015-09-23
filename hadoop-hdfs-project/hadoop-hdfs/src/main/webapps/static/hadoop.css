@@ -295,3 +295,10 @@ span.align-left {
 span.align-right {
   text-align: right;
 }
+
+.cut-paste {
+  width: 75px;
+  min-width: 75px;
+  float: right;
+  left: 75px;
+}
