@@ -64,6 +64,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -75,6 +76,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -149,6 +151,14 @@ public class HttpFSServer {
     }
   }
 
+  @OPTIONS
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response options() {
+    return Response.ok().header("Access-Control-Allow-Origin", "*")
+    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+    .build();
+  }
+
   /**
    * Special binding for '/' as it is not handled by the wildcard binding.
    *
@@ -217,7 +227,10 @@ public class HttpFSServer {
                        new Object[]{path, offset, len});
         InputStreamEntity entity = new InputStreamEntity(is, offset, len);
         response =
-          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM).build();
+          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         break;
       }
       case GETFILESTATUS: {
@@ -235,7 +248,10 @@ public class HttpFSServer {
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] filter [{}]", path,
                        (filter != null) ? filter : "-");
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         break;
       }
       case GETHOMEDIRECTORY: {
@@ -273,7 +289,10 @@ public class HttpFSServer {
           new FSOperations.FSFileChecksum(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
+          .header("Access-Control-Allow-Origin", "*")
+          .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+          .build();
         break;
       }
       case GETFILEBLOCKLOCATIONS: {
@@ -412,7 +431,10 @@ public class HttpFSServer {
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
-          response = Response.ok().type(MediaType.APPLICATION_JSON).build();
+          response = Response.ok().type(MediaType.APPLICATION_JSON)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         }
         break;
       }
