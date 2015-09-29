@@ -24,6 +24,28 @@
 
   //This stores the current directory which is being browsed
   var current_directory = "";
+  var webhdfs_endpoint = null;
+
+  function get_webhdfs_endpoint() {
+    if(webhdfs_endpoint == null) {
+      $.ajax({
+        url: '/conf?format=json',
+        success: function(data) {
+            webhdfs_endpoint = "";
+            for(var i in data.properties) {
+              if(data.properties[i].key == "dfs.webhdfs.endpoint") {
+                webhdfs_endpoint = data.properties[i].value;
+              }
+            }
+          },
+        error: function() {
+          webhdfs_endpoint = "";
+        },
+        async: false
+      })
+    }
+    return webhdfs_endpoint + '/webhdfs/v1';
+  }
 
   function show_err_msg(msg) {
     $('#alert-panel-body').html(msg);
@@ -86,7 +108,7 @@
 
     $('#delete-button').click(function() {
       // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
-      var url = '/webhdfs/v1' + encode_path(absolute_file_path) +
+      var url = get_webhdfs_endpoint() + encode_path(absolute_file_path) +
         '?op=DELETE' + '&recursive=true';
 
       $.ajax(url,
@@ -134,7 +156,7 @@
     var permission_mask = p.toString(8);
 
     // PUT /webhdfs/v1/<path>?op=SETPERMISSION&permission=<permission>
-    var url = '/webhdfs/v1' + encode_path(abs_path) +
+    var url = get_webhdfs_endpoint() + encode_path(abs_path) +
       '?op=SETPERMISSION' + '&permission=' + permission_mask;
 
     $.ajax(url, { type: 'PUT'
@@ -177,7 +199,7 @@
     }
 
     abs_path = encode_path(abs_path);
-    var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS';
+    var url = get_webhdfs_endpoint() + abs_path + '?op=GET_BLOCK_LOCATIONS';
     $.get(url).done(function(data) {
       var d = get_response(data, "LocatedBlocks");
       if (d === null) {
@@ -188,7 +210,7 @@
       $('#file-info-tail').hide();
       $('#file-info-title').text("File information - " + path);
 
-      var download_url = '/webhdfs/v1' + abs_path + '?op=OPEN';
+      var download_url = get_webhdfs_endpoint() + abs_path + '?op=OPEN';
 
       $('#file-info-download').attr('href', download_url);
       $('#file-info-preview').click(function() {
@@ -268,8 +290,9 @@
         url: function(params) {
           var inode_name = $(this).closest('tr').attr('inode-path');
           var absolute_file_path = append_path(current_directory, inode_name);
-          var url = '/webhdfs/v1' + encode_path(absolute_file_path) + '?op=' +
-            op + '&' + parameter + '=' + encodeURIComponent(params.value);
+          var url = get_webhdfs_endpoint() + encode_path(absolute_file_path) +
+            '?op=' + op + '&' + parameter + '='
+            + encodeURIComponent(params.value);
 
           return $.ajax(url, { type: 'PUT', })
             .error(network_error_handler(url))
@@ -289,7 +312,7 @@
         return chunk.write('' + moment(Number(value)).format('ddd MMM DD HH:mm:ss ZZ YYYY'));
       }
     };
-    var url = '/webhdfs/v1' + encode_path(dir) + '?op=LISTSTATUS';
+    var url = get_webhdfs_endpoint() + encode_path(dir) + '?op=LISTSTATUS';
     $.get(url, function(data) {
       var d = get_response(data, "FileStatuses");
       if (d === null) {
@@ -375,7 +398,7 @@
     $(this).prop('disabled', true);
     $(this).button('complete');
 
-    var url = '/webhdfs/v1' + encode_path(append_path(current_directory,
+    var url = get_webhdfs_endpoint() + encode_path(append_path(current_directory,
       $('#new_directory').val())) + '?op=MKDIRS';
 
     $.ajax(url, { type: 'PUT' }
@@ -397,7 +420,7 @@
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       (function() {
         var file = $('#modal-upload-file-input').prop('files')[i];
-        var url = '/webhdfs/v1' + current_directory;
+        var url = get_webhdfs_endpoint() + current_directory;
         url = encode_path(append_path(url, file.name));
         url += '?op=CREATE&noredirect=true';
         files.push( { file: file } )
@@ -428,7 +451,6 @@
               browse_directory(current_directory);
             }
           }).error(function(jqXHR, textStatus, errorThrown) {
-            numCompleted++;
             show_err_msg("Couldn't upload the file " + file.file.name + ". "+ errorThrown);
           });
         }).error(function(jqXHR, textStatus, errorThrown) {
@@ -457,7 +479,7 @@
     var files = JSON.parse(sessionStorage.getItem("selected_file_names"));
     var source_directory = sessionStorage.getItem("source_directory");
     $.each(files, function(index, value) {
-      var url = "/webhdfs/v1"
+      var url = get_webhdfs_endpoint()
         + encode_path(append_path(source_directory, value))
         + '?op=RENAME&destination=' 
         + encode_path(append_path(current_directory, value));
