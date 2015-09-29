@@ -213,6 +213,7 @@
       var download_url = get_webhdfs_endpoint() + abs_path + '?op=OPEN';
 
       $('#file-info-download').attr('href', download_url);
+      $('#file-info-preview').off();
       $('#file-info-preview').click(function() {
         var offset = d.fileLength - TAIL_CHUNK_SIZE;
         var url = offset > 0 ? download_url + '&offset=' + offset : download_url;
@@ -238,12 +239,6 @@
         }).error(function(jqXHR, textStatus, errorThrown) {
           show_err_msg("Couldn't find datanode to read file from. " + errorThrown);
         });
-        
-//        $.get(url, 
-//          function(t) {
-//          $('#file-info-preview-body').val(t);
-//          $('#file-info-tail').show();
-//        }, "text").error(network_error_handler(url));
       });
 
       if (d.fileLength > 0) {
@@ -327,22 +322,6 @@
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
 
-        $('#table-explorer').dataTable( {
-            'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
-            'aaSorting': [7,'asc'],
-            'columns': [
-              { 'orderable' : false }, //select
-              { 'searchable': false }, //Permissions
-              null, //Owner
-              null, //Group
-              { 'searchable': false, 'render': func_size_render}, //Size
-              { 'searchable': false, 'render': func_time_render}, //Last Mod
-              { 'searchable': false }, //Replication
-              null, //Name
-              { 'orderable' : false } //Trash
-            ]
-        });
-
         $('.explorer-browse-links').click(function() {
           var type = $(this).attr('inode-type');
           var path = $(this).closest('tr').attr('inode-path');
@@ -375,6 +354,24 @@
         $('#file-selector-all').click(function() {
           $('.file_selector').prop('checked', $('#file-selector-all')[0].checked );
         });
+
+        //This needs to be last because it repaints the table
+        $('#table-explorer').dataTable( {
+          'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+          'aaSorting': [7,'asc'],
+          'columns': [
+            { 'orderable' : false }, //select
+            { 'searchable': false }, //Permissions
+            null, //Owner
+            null, //Group
+            { 'searchable': false, 'render': func_size_render}, //Size
+            { 'searchable': false, 'render': func_time_render}, //Last Mod
+            { 'searchable': false }, //Replication
+            null, //Name
+            { 'orderable' : false } //Trash
+          ]
+      });
+
       });
     }).error(network_error_handler(url));
   }
@@ -474,7 +471,7 @@
       selected_file_names[index] = $(this).closest('tr').attr('inode-path');
     })
     sessionStorage.setItem("selected_file_names", JSON.stringify(selected_file_names));
-    alert("Cut " + files.length + " files/directories");
+    alert("Cut " + selected_file_names.length + " files/directories");
   }
 
   //Retrieve the list of files from session storage and rename them to the current
