@@ -371,6 +371,10 @@
           var absolute_file_path = append_path(current_directory, inode_name);
           delete_path(inode_name, absolute_file_path);
         })
+
+        $('#file-selector-all').click(function() {
+          $('.file_selector').prop('checked', $('#file-selector-all')[0].checked );
+        });
       });
     }).error(network_error_handler(url));
   }
@@ -502,7 +506,7 @@
   });
 
   $('#explorer-paste').click(function() {
-    paste_selected_files()
+    paste_selected_files();
   });
 
   $('#explorer-bulk-delete').click(function() {
