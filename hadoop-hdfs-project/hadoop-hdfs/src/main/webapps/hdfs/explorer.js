@@ -505,5 +505,35 @@
     paste_selected_files()
   });
 
+  $('#explorer-bulk-delete').click(function() {
+    var selected_files = $("input:checked.file_selector");
+    $('#delete-modal-title').text("Delete " + selected_files.length + " files/directories");
+    $('#delete-prompt').text("Are you sure you want to delete " + selected_files.length
+      + " files/directories ?");
+
+    $('#delete-button').click(function() {
+      var completed_files = 0;
+      selected_files.each(function(index) {
+        // DELETE /webhdfs/v1/<path>?op=DELETE&recursive=<true|false>
+        var absolute_file_path = append_path(current_directory, $(this).closest('tr').attr('inode-path'));
+        var url = get_webhdfs_endpoint() + encode_path(absolute_file_path) +
+          '?op=DELETE' + '&recursive=true';
+
+        $.ajax(url,
+          { type: 'DELETE'
+          }).error(network_error_handler(url)
+           ).complete(function() {
+             completed_files++;
+             if(completed_files == selected_files.length) {
+               $('#delete-modal').modal('hide');
+               $('#delete-button').button('reset');
+               browse_directory(current_directory);
+             }
+          });
+      })
+    })
+    $('#delete-modal').modal();
+  });
+
   init();
 })();
