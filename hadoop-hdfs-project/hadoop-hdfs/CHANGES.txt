@@ -757,6 +757,9 @@ Release 2.7.1 - 2015-07-06
 
   IMPROVEMENTS
 
+    HDFS-9193. Fix incorrect references the usages of the DN in dfshealth.js.
+    (Chang Li via wheat9)
+
     HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
     (wheat9)
 
