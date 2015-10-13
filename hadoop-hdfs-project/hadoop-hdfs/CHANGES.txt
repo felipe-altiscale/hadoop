@@ -347,6 +347,9 @@ Release 2.7.1 - 2015-07-06
 
   IMPROVEMENTS
 
+    HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
+    (wheat9)
+
     HDFS-8081. Split getAdditionalBlock() into two methods. (shv)
 
     HDFS-7931. DistributedFileSystem should not look for keyProvider in

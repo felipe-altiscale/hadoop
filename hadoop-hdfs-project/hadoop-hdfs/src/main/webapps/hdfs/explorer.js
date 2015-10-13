@@ -200,7 +200,8 @@
 
     abs_path = encode_path(abs_path);
     var url = get_webhdfs_endpoint() + abs_path + '?op=GET_BLOCK_LOCATIONS';
-    $.get(url).done(function(data) {
+    $.ajax({url: url, dataType: 'text'}).done(function(data_text) {
+      var data = JSONParseBigNum(data_text);
       var d = get_response(data, "LocatedBlocks");
       if (d === null) {
         show_err_msg(get_response_err_msg(data));
