@@ -1,20 +1,5 @@
 Hadoop HDFS Change Log
 
-    HDFS-2956. calling fetchdt without a --renewer argument throws NPE
-    (vinayakumarb)
-
-Release 2.7.2 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
 Release 2.7.1 - 2015-06-28
 
   INCOMPATIBLE CHANGES
@@ -22,6 +7,9 @@ Release 2.7.1 - 2015-06-28
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
+    (wheat9)
 
     HDFS-8081. Split getAdditionalBlock() into two methods. (shv)
 
