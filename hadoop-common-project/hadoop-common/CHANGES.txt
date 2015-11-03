@@ -497,6 +497,11 @@ Release 2.7.3 - 2016-08-25
     HADOOP-5323. Trash documentation should describe its directory structure and
     configurations. (Weiwei Yang via ozawa)
 
+    HADOOP-12436. GlobPattern regex library has performance issues with
+    wildcard characters (Matthew Paduano via aw)
+
+    HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
+
   OPTIMIZATIONS
 
   BUG FIXES
