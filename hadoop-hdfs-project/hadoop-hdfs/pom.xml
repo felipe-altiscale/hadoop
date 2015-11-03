@@ -20,12 +20,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>2.7.2</version>
+    <version>2.7.3-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-hdfs</artifactId>
-  <version>2.7.2</version>
+  <version>2.7.3-SNAPSHOT</version>
   <description>Apache Hadoop HDFS</description>
   <name>Apache Hadoop HDFS</name>
   <packaging>jar</packaging>
@@ -168,11 +168,6 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>xmlenc</groupId>
       <artifactId>xmlenc</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -387,14 +382,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <exclude>src/contrib/**</exclude>
             <exclude>src/site/resources/images/*</exclude>
             <exclude>src/main/webapps/static/bootstrap-3.0.2/**</exclude>
-            <exclude>src/main/webapps/static/moment.min.js</exclude>
             <exclude>src/main/webapps/static/dust-full-2.0.0.min.js</exclude>
             <exclude>src/main/webapps/static/dust-helpers-1.1.1.min.js</exclude>
             <exclude>src/main/webapps/static/jquery-1.10.2.min.js</exclude>
-            <exclude>src/main/webapps/static/jquery.dataTables.min.js</exclude>
-            <exclude>src/main/webapps/static/json-bignum.js</exclude>
-            <exclude>src/main/webapps/static/dataTables.bootstrap.css</exclude>
-            <exclude>src/main/webapps/static/dataTables.bootstrap.js</exclude>
           </excludes>
         </configuration>
       </plugin>
