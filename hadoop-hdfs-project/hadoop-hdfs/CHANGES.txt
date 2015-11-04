@@ -347,6 +347,9 @@ Release 2.7.1 - 2015-07-06
 
   IMPROVEMENTS
 
+    HDFS-9357. NN UI renders icons of decommissioned DN incorrectly.
+    (Surendra Singh Lilhore via wheat9)
+
     HDFS-9193. Fix incorrect references the usages of the DN in dfshealth.js.
     (Chang Li via wheat9)
 
