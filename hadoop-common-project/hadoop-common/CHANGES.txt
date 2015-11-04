@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 2.7.2 - 2016-01-25
+Release 2.7.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -8,22 +8,21 @@ Release 2.7.2 - 2016-01-25
 
   IMPROVEMENTS
 
-    HADOOP-12292. Make use of DeleteObjects optional. (Thomas Demoor via stevel)
-  
-    HADOOP-12548. Read s3a creds from a Credential Provider. 
-    Contributed by Larry McCay.
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.7.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
 
     HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
 
-    HADOOP-5323. Trash documentation should describe its directory structure and
-    configurations. (Weiwei Yang via ozawa)
-
-    HADOOP-12436. GlobPattern regex library has performance issues with
-    wildcard characters (Matthew Paduano via aw)
-
-    HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
-
-    HADOOP-12366. expose calculated paths (aw)  OPTIMIZATIONS
+  OPTIMIZATIONS
 
   BUG FIXES
 
@@ -56,9 +55,6 @@ Release 2.7.2 - 2016-01-25
     
     HADOOP-12451. Setting HADOOP_HOME explicitly should be allowed. (kasha)
 
-    YARN-3021. YARN's delegation-token handling disallows certain trust setups to 
-    operate properly over DistCp. Contributed by Yongjun Zhang
-
     HADOOP-12230. hadoop-project declares duplicate, conflicting curator
     dependencies. (Rakesh R via aajisaka)
 
@@ -69,9 +65,6 @@ Release 2.7.2 - 2016-01-25
 
     HADOOP-9242. Duplicate surefire plugin config in hadoop-common.
     (Andrey Klochkov via suresh)
-
-    HADOOP-12415. Fixed pom files to correctly include compile-time dependency on
-    netty. (Tom Zeng via cos)
 
 Release 2.7.1 - 2015-07-06 
 
@@ -84,18 +77,9 @@ Release 2.7.1 - 2015-07-06
     HADOOP-12103. Small refactoring of DelegationTokenAuthenticationFilter to
     allow code sharing. (Yongjun Zhang)
 
-    HADOOP-11827. Speed-up distcp buildListing() using threadpool
-    (Zoran Dimitrijevic via raviprak)
-
-    HADOOP-12436. GlobPattern regex library has performance issues with
-    wildcard characters (Matthew Paduano via aw)
-
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HADOOP-12017. Hadoop archives command should use configurable replication
-    factor when closing (Bibin A Chundatt via vinayakumarb)
 
     HADOOP-11868. Invalid user logins trigger large backtraces in server log
     (Chang Li via jlowe)
@@ -104,9 +88,6 @@ Release 2.7.1 - 2015-07-06
     Windows(branch-2 only) (Varun Vasudev via cnauroth)
 
     HADOOP-11891. OsSecureRandom should lazily fill its reservoir (asuresh)
-
-    HADOOP-11876. Refactor code to make it more readable, minor
-    maybePrintStats bug (Zoran Dimitrijevic via raviprak)
 
     HADOOP-9658. SnappyCodec#checkNativeCodeLoaded may unexpectedly fail when
     native code is not loaded. (Zhijie Shen via ozawa)
@@ -130,9 +111,6 @@ Release 2.7.1 - 2015-07-06
     that method doesn't modify the FsPermission (Bibin A Chundatt via Colin P.
     McCabe)
 
-    HD-1432. Potential null pointer dereference in Jets3tFileSystemStore#retrieveBlock
-    (Matt Paduano)
-
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
@@ -140,8 +118,6 @@ Release 2.7.0 - 2015-04-20
     HADOOP-10530 Make hadoop build on Java7+ only (stevel)
 
   NEW FEATURES
-    HADOOP-3733 "s3:" URLs break when Secret Key contains a slash, even if encoded
-    (Altiscale patch, dchaiken, raviprak)
 
     HADOOP-10987. Provide an iterator-based listing API for FileSystem (kihwal)
 
@@ -381,9 +357,6 @@ Release 2.7.0 - 2015-04-20
     Arpit Agarwal)
 
   OPTIMIZATIONS
-
-    HADOOP-11785. Reduce the number of listStatus operation in distcp
-    buildListing (Zoran Dimitrijevic via Colin P. McCabe)
 
     HADOOP-11323. WritableComparator#compare keeps reference to byte array.
     (Wilfred Spiegelenburg via wang)
@@ -847,17 +820,9 @@ Release 2.6.3 - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-12413. AccessControlList should avoid calling getGroupNames in
-    isUserInList with empty groups. (Zhihai Xu via cnauroth)
-
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HADOOP-12577. Bumped up commons-collections version to 3.2.2 to address a
-    security flaw. (Wei-Chiu Chuang via vinodkv)
-
-    HADOOP-12526. there are duplicate dependency definitions in pom's (sjlee)
 
 Release 2.6.2 - 2015-10-28
 

@@ -1,6 +1,18 @@
 Hadoop HDFS Change Log
 
-Release 2.7.2 - 2016-01-25
+Release 2.7.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.7.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -10,13 +22,14 @@ Release 2.7.2 - 2016-01-25
 
     HDFS-8659. Block scanner INFO message is spamming logs. (Yongjun Zhang)
 
+    HADOOP-5323. Trash documentation should describe its directory structure and
+    configurations. (Weiwei Yang via ozawa)
+
     HDFS-8099. Change "DFSInputStream has been closed already" message to
     debug log level (Charles Lamb via Colin P. McCabe)
 
     HDFS-9221. HdfsServerConstants#ReplicaState#getState should avoid calling
     values() since it creates a temporary array. (Staffan Friberg via yliu)
-
-    HDFS-9574. Reduce client failures during datanode restart (kihwal)
 
   OPTIMIZATIONS
 
@@ -26,12 +39,6 @@ Release 2.7.2 - 2016-01-25
     (Vinayakumar B and Keisuke Ogiwara via Arpit Agarwal)
 
   BUG FIXES
-
-    HDFS-8581. ContentSummary on / skips further counts on yielding lock
-    (J.Andreina via vinayakumarb)
-
-    HDFS-2956. calling fetchdt without a --renewer argument throws NPE
-    (vinayakumarb)
 
     HDFS-6945. BlockManager should remove a block from excessReplicateMap and
     decrement ExcessBlocks metric when the block is removed. (aajisaka)
@@ -97,18 +104,6 @@ Release 2.7.2 - 2016-01-25
     HDFS-9317. Document fsck -blockId and -storagepolicy options in branch-2.7.
     (aajisaka)
 
-    HDFS-9413. getContentSummary() on standby should throw StandbyException.
-    (Brahma Reddy Battula via mingma)
-
-    HDFS-9426. Rollingupgrade finalization is not backward compatible
-    (Kihwal Lee via vinayakumarb)
-
-    HDFS-9445. Datanode may deadlock while handling a bad volume.
-    (Wlater Su via Kihwal)
-
-    HDFS-8767. RawLocalFileSystem.listStatus() returns null for UNIX pipefile.
-    (Kanaka Kumar Avvaru via wheat9)
-
 Release 2.7.1 - 2015-07-06
 
   INCOMPATIBLE CHANGES
@@ -116,15 +111,6 @@ Release 2.7.1 - 2015-07-06
   NEW FEATURES
 
   IMPROVEMENTS
-
-    HDFS-9357. NN UI renders icons of decommissioned DN incorrectly.
-    (Surendra Singh Lilhore via wheat9)
-
-    HDFS-9193. Fix incorrect references the usages of the DN in dfshealth.js.
-    (Chang Li via wheat9)
-
-    HDFS-8779. WebUI fails to display block IDs that are larger than 2^53 - 1.
-    (wheat9)
 
     HDFS-8081. Split getAdditionalBlock() into two methods. (shv)
 
@@ -151,39 +137,6 @@ Release 2.7.1 - 2015-07-06
   OPTIMIZATIONS
 
     HDFS-7164. Feature documentation for HDFS-6581. (Arpit Agarwal)
-
-    HDFS-7986. Allow files / directories to be deleted from the NameNode UI.
-    (Ravi Prakash via wheat9)
-
-    HDFS-7995. Implement chmod in the HDFS Web UI.
-    (Ravi Prakash and Haohui Mai via wheat9)
-
-    HDFS-7713. Implement mkdirs in the HDFS Web UI. (Ravi Prakash via wheat9)
-
-    HDFS-6407. Add sorting and pagination in the datanode tab of the NN Web UI.
-    (wheat9)
-
-    HDFS-8816. Improve visualization for the Datanode tab in the NN UI. (wheat9)
-
-    HDFS-9084. Pagination, sorting and filtering of files/directories in the 
-    HDFS Web UI (Ravi Prakash)
-
-    HDFS-7796. Include X-editable for slick contenteditable fields in the web UI
-    (Ravi Prakash)
-
-    HDFS-7779. Improve the HDFS Web UI browser to allow chowning / chgrp and 
-    setting replication (Ravi Prakash)
-
-    HDFS-8435. Support CreateFlag in WebHDFS. (Jakob Homan via cdouglas)
-
-    HDFS-7766. Add a flag to WebHDFS op=CREATE to not respond with a 307 redirect
-    Altiscale Proprietary feature for now. Please do not use (in case we drop
-    support for this later). (Ravi Prakash)
-
-    HDFS-8678. Bring back the feature to view chunks of files in the HDFS file 
-    browser (Ravi Prakash)
-
-    HDFS-7987. Allow files / directories to be moved (Ravi Prakash)
 
   OPTIMIZATIONS
 
@@ -235,9 +188,6 @@ Release 2.7.1 - 2015-07-06
     HDFS-8451. DFSClient probe for encryption testing interprets empty URI
     property for "enabled". (Steve Loughran via xyao)
 
-    HDFS-8214. Secondary NN Web UI shows wrong date for Last Checkpoint. (clamb via wang)
-
-
     HDFS-5215. dfs.datanode.du.reserved is not considered while computing
     available space ( Brahma Reddy Battula via Yongjun Zhang)
 
@@ -282,18 +232,6 @@ Release 2.7.1 - 2015-07-06
 
     HDFS-8681. BlockScanner is incorrectly disabled by default.
     (Arpit Agarwal)
-
-    HDFS-8344. NameNode doesn't recover lease for files with missing blocks
-    (raviprak)
-
-    HDFS-8337. Accessing httpfs via webhdfs doesn't work from a jar with
-    kerberos. (Yongjun Zhang)
-
-    HDFS-8099. Change "DFSInputStream has been closed already" message to
-    debug log level (Charles Lamb via Colin P. McCabe)
-
-    HDFS-9760. WebHDFS AuthFilter cannot be configured with custom AltKerberos
-    auth handler (Ryan Sasson via aw)
 
 Release 2.7.0 - 2015-04-20
 
@@ -1194,7 +1132,7 @@ Release 2.7.0 - 2015-04-20
       HDFS-7824. GetContentSummary API and its namenode implementation for
       Storage Type Quota/Usage. (Xiaoyu Yao via Arpit Agarwal)
 
-Release 2.6.4 - UNRELEASED
+Release 2.6.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -1205,37 +1143,6 @@ Release 2.6.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    HDFS-9294. DFSClient deadlock when close file and failed to renew lease.
-    (Brahma Reddy Battula via szetszwo)
-
-Release 2.6.3 - 2015-12-17
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  BUG FIXES
-
-    HDFS-9434. Recommission a datanode with 500k blocks may pause NN for 30
-    seconds for printing info log messags.  (szetszwo)
-
-    HDFS-9273. ACLs on root directory may be lost after NN restart.
-    (Xiao Chen via cnauroth)
-
-    HDFS-9470. Encryption zone on root not loaded from fsimage after NN
-    restart. (Xiao Chen via wang)
-
-    HDFS-9289. Make DataStreamer#block thread safe and verify genStamp in
-    commitBlock. (Chang Li via kihwal)
-
-    HDFS-9431. DistributedFileSystem#concat fails if the target path is
-    relative. (Kazuho Fujii via aajisaka)
-
-    HDFS-8615. Correct HTTP method in WebHDFS document.
-    (Brahma Reddy Battula via aajisaka)
 
 Release 2.6.2 - 2015-10-28
 
