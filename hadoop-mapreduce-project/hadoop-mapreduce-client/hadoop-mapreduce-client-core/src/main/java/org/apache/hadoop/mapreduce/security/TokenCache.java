@@ -108,10 +108,12 @@ public class TokenCache {
       String host = fs.getUri().getHost();
       for(int i=0; i< nns.length; i++) {
         if (nns[i].equals(host)) {
+          LOG.info("HEESOO : isTokenRenewalExcluded " + host + "; "+ nns[i]);
           return true;
         }
       }
     }
+    LOG.info("HEESOO : isTokenRenewalExcluded -- NOT " + fs.getUri().getHost());
     return false;
   }
 
