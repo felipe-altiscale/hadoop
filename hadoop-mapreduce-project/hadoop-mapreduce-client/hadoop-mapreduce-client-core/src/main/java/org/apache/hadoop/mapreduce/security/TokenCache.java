@@ -104,9 +104,11 @@ public class TokenCache {
   static boolean isTokenRenewalExcluded(FileSystem fs, Configuration conf) {
     String [] nns =
         conf.getStrings(MRJobConfig.JOB_NAMENODES_TOKEN_RENEWAL_EXCLUDE);
+    LOG.info("HEESOO : nns - " + nns);
     if (nns != null) {
       String host = fs.getUri().getHost();
       for(int i=0; i< nns.length; i++) {
+        LOG.info("HEESOO : compare nn vs host - " + nns[i] + "; "+ host);
         if (nns[i].equals(host)) {
           LOG.info("HEESOO : isTokenRenewalExcluded " + host + "; "+ nns[i]);
           return true;
