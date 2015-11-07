@@ -21,6 +21,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -59,6 +61,9 @@ public class DelegationTokenManager {
       "removal-scan-interval.sec";
   public static final long REMOVAL_SCAN_INTERVAL_DEFAULT = 60 * 60;
 
+  private static final Log LOG = LogFactory
+             .getLog(DelegationTokenManager.class);
+
   private static class DelegationTokenSecretManager
       extends AbstractDelegationTokenSecretManager<DelegationTokenIdentifier> {
 
@@ -71,6 +76,10 @@ public class DelegationTokenManager {
           conf.getLong(REMOVAL_SCAN_INTERVAL,
               REMOVAL_SCAN_INTERVAL_DEFAULT * 1000));
       this.tokenKind = tokenKind;
+      LOG.info("HEESOO: REMOVAL_SCAN_INTERVAL("+REMOVAL_SCAN_INTERVAL+"): "+ REMOVAL_SCAN_INTERVAL_DEFAULT);
+      LOG.info("HEESOO: UPDATE_INTERVAL("+UPDATE_INTERVAL+"): "+ UPDATE_INTERVAL_DEFAULT);
+      LOG.info("HEESOO: MAX_LIFETIME("+MAX_LIFETIME+"): "+ MAX_LIFETIME_DEFAULT);
+      LOG.info("HEESOO: RENEW_INTERVAL("+RENEW_INTERVAL+"): "+ RENEW_INTERVAL_DEFAULT);
     }
 
     @Override

@@ -32,6 +32,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -88,7 +90,8 @@ public abstract class DelegationTokenAuthenticationHandler
 
   public static final String DELEGATION_TOKEN_UGI_ATTRIBUTE =
       "hadoop.security.delegation-token.ugi";
-
+  private static final Log LOG = LogFactory
+             .getLog(DelegationTokenAuthenticationHandler.class);
   static {
     DELEGATION_TOKEN_OPS.add(KerberosDelegationTokenAuthenticator.
         DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
@@ -193,11 +196,17 @@ public abstract class DelegationTokenAuthenticationHandler
           UserGroupInformation requestUgi = (token != null)
               ? UserGroupInformation.createRemoteUser(token.getUserName())
               : null;
+          if (token != null) {
+                 LOG.info("HEESOO - requestUgi - 1: token.getUserName() - "+token.getUserName());
+          } else {
+                 LOG.info("HEESOO - requestUgi - 1: null");
+          }              
           // Create the proxy user if doAsUser exists
           String doAsUser = DelegationTokenAuthenticationFilter.getDoAs(request);
           if (requestUgi != null && doAsUser != null) {
             requestUgi = UserGroupInformation.createProxyUser(
                 doAsUser, requestUgi);
+         LOG.info("HEESOO - requestUgi - 2: doAsUser - "+doAsUser+", requestUgi - "+requestUgi.getUserName());
             try {
               ProxyUsers.authorize(requestUgi, request.getRemoteHost());
             } catch (AuthorizationException ex) {
