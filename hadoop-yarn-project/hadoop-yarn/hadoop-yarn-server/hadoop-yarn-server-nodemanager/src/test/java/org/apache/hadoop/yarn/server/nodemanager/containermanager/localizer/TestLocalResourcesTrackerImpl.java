@@ -855,7 +855,7 @@ public class TestLocalResourcesTrackerImpl {
       localrsrc.put(req, lr);
       LocalResourcesTracker tracker =
           new LocalResourcesTrackerImpl(user, null, dispatcher, localrsrc,
-              false, conf, new NMNullStateStoreService());
+              false, conf, new NMNullStateStoreService(), null);
 
       // request the resource
       ResourceEvent reqEvent =
