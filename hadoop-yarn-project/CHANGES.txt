@@ -1289,6 +1289,8 @@ Release 2.6.4 - 2016-02-11
 
   IMPROVEMENTS
 
+    YARN-4287. Capacity Scheduler: Rack Locality improvement. (Nathan Roberts via wangda)
+
   OPTIMIZATIONS
 
   BUG FIXES
