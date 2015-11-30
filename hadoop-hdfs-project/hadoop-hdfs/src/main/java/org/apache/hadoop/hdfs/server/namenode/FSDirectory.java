@@ -1187,7 +1187,7 @@ public class FSDirectory implements Closeable {
               ezProto.getKeyName());
         } catch (InvalidProtocolBufferException e) {
           NameNode.LOG.warn("Error parsing protocol buffer of " +
-              "EZ XAttr " + xattr.getName());
+              "EZ XAttr " + xattr.getName() + " dir:" + inode.getFullPathName());
         }
       }
     }
