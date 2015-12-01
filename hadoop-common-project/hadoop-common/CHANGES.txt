@@ -167,7 +167,7 @@ Release 2.7.2 - 2016-01-25
 
     HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
 
-  OPTIMIZATIONS
+    HADOOP-12366. expose calculated paths (aw)  OPTIMIZATIONS
 
   BUG FIXES
 
