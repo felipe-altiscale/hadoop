@@ -33,8 +33,7 @@ public class DelegationParam extends StringParam {
    * @param str a string representation of the parameter value.
    */
   public DelegationParam(final String str) {
-    super(DOMAIN, UserGroupInformation.isSecurityEnabled()
-        && str != null && !str.equals(DEFAULT)? str: null);
+    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
   }
 
   @Override
