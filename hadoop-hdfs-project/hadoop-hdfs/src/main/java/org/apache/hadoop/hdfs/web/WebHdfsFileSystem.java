@@ -1341,9 +1341,6 @@ public class WebHdfsFileSystem extends FileSystem
       final Token<T> token) {
     synchronized (this) {
       delegationToken = token;
-      if (token == null) {
-        this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
-      }
     }
   }
 
