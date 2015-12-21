@@ -18,6 +18,8 @@ Release 2.7.1 - 2015-06-28
 
   NEW FEATURES
 
+    HADOOP-12366. expose calculated paths (aw)
+
   IMPROVEMENTS
 
     HADOOP-12103. Small refactoring of DelegationTokenAuthenticationFilter to
@@ -28,6 +30,8 @@ Release 2.7.1 - 2015-06-28
 
     HADOOP-12436. GlobPattern regex library has performance issues with
     wildcard characters (Matthew Paduano via aw)
+
+    HADOOP-12541. make re2j dependency consistent (Matthew Paduano via aw)
 
   OPTIMIZATIONS
 
