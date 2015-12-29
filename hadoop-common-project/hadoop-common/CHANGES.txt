@@ -614,6 +614,9 @@ Release 2.7.1 - 2015-07-06
     that method doesn't modify the FsPermission (Bibin A Chundatt via Colin P.
     McCabe)
 
+    HD-1432. Potential null pointer dereference in Jets3tFileSystemStore#retrieveBlock
+    (Matt Paduano)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
