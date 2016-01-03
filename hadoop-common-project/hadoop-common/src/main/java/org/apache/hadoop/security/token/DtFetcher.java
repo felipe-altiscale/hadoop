@@ -15,27 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.web.resources;
 
-/** Represents delegation token used for authentication. */
-public class DelegationParam extends StringParam {
-  /** Parameter name. */
-  public static final String NAME = "delegation";
-  /** Default parameter value. */
-  public static final String DEFAULT = "";
+package org.apache.hadoop.security.token;
 
-  private static final Domain DOMAIN = new Domain(NAME, null);
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
-  public DelegationParam(final String str) {
-    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
-  }
+/**
+ *  DtFetcher is an interface which permits the abstraction and separation of
+ *  delegation token fetch implementaions across different packages and
+ *  compilation units.  Resolution of fetcher impl will be done at runtime.
+ */
+public interface DtFetcher {
+  /** Return a key used to identify the object/service implementation. */
+  Text getServiceName();
 
-  @Override
-  public String getName() {
-    return NAME;
-  }
+  /** Add any number of delegation tokens to Credentials object and return
+   *  a token instance that is approriate for aliasing, or null if none. */
+  Token<?> addDelegationTokens(Credentials creds, String renewer, String url)
+      throws Exception;
 }
