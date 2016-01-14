@@ -195,7 +195,7 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new DelegationParam(tokenString).toString()
+            new UserParam(ugi.getShortUserName()).toString()
         },
         fileStatusUrl);    
   }
@@ -280,7 +280,8 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETFILESTATUS.toQueryString(),
-            new DelegationParam(tokenString).toString()
+            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
+            new DoAsParam(ugi.getShortUserName()).toString()
         },
         fileStatusUrl);    
   }
