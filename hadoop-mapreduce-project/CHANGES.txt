@@ -151,6 +151,9 @@ Release 2.7.2 - 2016-01-25
     MAPREDUCE-6451. DistCp has incorrect chunkFilePath for multiple jobs when
     strategy is dynamic (Kuhu Shukla via kihwal)
 
+    MAPREDUCE-6619. HADOOP_CLASSPATH is overwritten in MR container. (Junping
+    Du via jianhe)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES
