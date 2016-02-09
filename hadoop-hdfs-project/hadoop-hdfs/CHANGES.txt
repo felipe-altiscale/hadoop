@@ -920,6 +920,9 @@ Release 2.7.1 - 2015-07-06
     HDFS-8099. Change "DFSInputStream has been closed already" message to
     debug log level (Charles Lamb via Colin P. McCabe)
 
+    HDFS-9760. WebHDFS AuthFilter cannot be configured with custom AltKerberos
+    auth handler (Ryan Sasson via aw)
+
 Release 2.7.0 - 2015-04-20
 
   INCOMPATIBLE CHANGES
