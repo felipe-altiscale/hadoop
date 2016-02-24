@@ -151,11 +151,16 @@ Release 2.7.3 - 2016-08-25
 
 Release 2.7.2 - 2016-01-25
 
+Release 2.7.2 - 2016-01-25
+
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
   IMPROVEMENTS
+  
+    HADOOP-12548. Read s3a creds from a Credential Provider. 
+    Contributed by Larry McCay.
 
     HADOOP-12232. Upgrade Tomcat dependency to 6.0.44. (cnauroth)
 
