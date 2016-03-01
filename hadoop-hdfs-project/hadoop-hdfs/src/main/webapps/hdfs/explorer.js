@@ -251,28 +251,6 @@
     }).error(network_error_handler(url));
   }
 
-  function func_size_render(data, type, row, meta) {
-    if(type == 'display') {
-      return dust.filters.fmt_bytes(data);
-    }
-    else return data;
-  }
-
-  // Change the format of date-time depending on how old the
-  // the timestamp is. If older than 6 months, no need to be
-  // show exact time.
-  function func_time_render(data, type, row, meta) {
-    if(type == 'display') {
-      var cutoff = moment().subtract(6, 'months').unix() * 1000;
-      if(data < cutoff) {
-        return moment(Number(data)).format('MMM DD YYYY');
-      } else {
-        return moment(Number(data)).format('MMM DD HH:mm');
-      }
-    }
-    return data;
-  }
-
   /**Use X-editable to make fields editable with a nice UI.
    * elementType is the class of element(s) you want to make editable
    * op is the WebHDFS operation that will be triggered
@@ -300,6 +278,28 @@
     });
   }
 
+  function func_size_render(data, type, row, meta) {
+    if(type == 'display') {
+      return dust.filters.fmt_bytes(data);
+    }
+    else return data;
+  }
+
+  // Change the format of date-time depending on how old the
+  // the timestamp is. If older than 6 months, no need to be
+  // show exact time.
+  function func_time_render(data, type, row, meta) {
+    if(type == 'display') {
+      var cutoff = moment().subtract(6, 'months').unix() * 1000;
+      if(data < cutoff) {
+        return moment(Number(data)).format('MMM DD YYYY');
+      } else {
+        return moment(Number(data)).format('MMM DD HH:mm');
+      }
+    }
+    return data;
+  }
+
   function browse_directory(dir) {
     var HELPERS = {
       'helper_date_tostring' : function (chunk, ctx, bodies, params) {
@@ -321,6 +321,23 @@
       var base = dust.makeBase(HELPERS);
       dust.render('explorer', base.push(d), function(err, out) {
         $('#panel').html(out);
+
+        //This needs to be last because it repaints the table
+        $('#table-explorer').dataTable( {
+          'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
+          'aaSorting': [7,'asc'],
+          'columns': [
+            { 'orderable' : false }, //select
+            {'searchable': false }, //Permissions
+            null, //Owner
+            null, //Group
+            { 'searchable': false, 'render': func_size_render}, //Size
+            { 'searchable': false, 'render': func_time_render}, //Last Modified
+            { 'searchable': false }, //Replication
+            null, //Name
+            { 'orderable' : false } //Trash
+          ]
+        });
 
         $('.explorer-browse-links').click(function() {
           var type = $(this).attr('inode-type');
@@ -354,23 +371,6 @@
         $('#file-selector-all').click(function() {
           $('.file_selector').prop('checked', $('#file-selector-all')[0].checked );
         });
-
-        //This needs to be last because it repaints the table
-        $('#table-explorer').dataTable( {
-          'lengthMenu': [ [25, 50, 100, -1], [25, 50, 100, "All"] ],
-          'aaSorting': [7,'asc'],
-          'columns': [
-            { 'orderable' : false }, //select
-            { 'searchable': false }, //Permissions
-            null, //Owner
-            null, //Group
-            { 'searchable': false, 'render': func_size_render}, //Size
-            { 'searchable': false, 'render': func_time_render}, //Last Mod
-            { 'searchable': false }, //Replication
-            null, //Name
-            { 'orderable' : false } //Trash
-          ]
-      });
 
       });
     }).error(network_error_handler(url));
@@ -482,7 +482,7 @@
     $.each(files, function(index, value) {
       var url = get_webhdfs_endpoint()
         + encode_path(append_path(source_directory, value))
-        + '?op=RENAME&destination=' 
+        + '?op=RENAME&destination='
         + encode_path(append_path(current_directory, value));
       $.ajax({
         type: 'PUT',
