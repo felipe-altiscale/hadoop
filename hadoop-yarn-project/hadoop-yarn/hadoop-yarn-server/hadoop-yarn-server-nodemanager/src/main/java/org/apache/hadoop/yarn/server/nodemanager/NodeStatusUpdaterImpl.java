@@ -656,6 +656,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
                   new CMgrCompletedAppsEvent(appsToCleanup,
                       CMgrCompletedAppsEvent.Reason.BY_RESOURCEMANAGER));
             }
+            NodeStatusUpdaterImpl.this.metrics.setNumApplications(
+              context.getApplications().size());
 
             Map<ApplicationId, ByteBuffer> systemCredentials =
                 response.getSystemCredentialsForApps();
