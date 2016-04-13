@@ -48,6 +48,8 @@ public class NodeManagerMetrics {
   @Metric MutableGaugeInt availableVCores;
   @Metric("Container launch duration")
       MutableRate containerLaunchDuration;
+  @Metric("Number of Applications")
+      MutableCounterInt numApplications;
 
   private long allocatedMB;
   private long availableMB;
@@ -142,5 +144,9 @@ public class NodeManagerMetrics {
   @VisibleForTesting
   public int getCompletedContainers() {
     return containersCompleted.value();
+  }
+
+  public void setNumApplications(int numApps) {
+    numApplications.incr(numApps - numApplications.value());
   }
 }
