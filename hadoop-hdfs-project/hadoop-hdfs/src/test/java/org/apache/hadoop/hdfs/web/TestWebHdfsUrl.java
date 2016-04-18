@@ -141,7 +141,7 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString()
+            new DelegationParam(tokenString).toString()
         },
         getTokenUrl);
 
@@ -222,8 +222,7 @@ public class TestWebHdfsUrl {
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
-            new DoAsParam(ugi.getShortUserName()).toString()
+            new DelegationParam(tokenString).toString()
         },
         getTokenUrl);
 
