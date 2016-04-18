@@ -71,6 +71,9 @@ public class HdfsDtFetcher implements DtFetcher {
       url = getServiceName().toString() + "://" + url;
     }
     FileSystem fs = FileSystem.get(URI.create(url), conf);
+    if (renewer == null) {  // branch-2.7.1-alti can't handle null
+      renewer = "";
+    }
     Token<?> token = fs.getDelegationToken(renewer);
     if (token == null) {
       LOG.error(FETCH_FAILED);
