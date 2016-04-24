@@ -308,6 +308,8 @@ public class CommonConfigurationKeysPublic {
       "fs.azure\\.account.key.*" + "," +
       "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
       HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
+  public static final String HADOOP_TOKEN_FILES =
+      "hadoop.token.files";
 
   @Deprecated
   /** Only used by HttpServer. */
