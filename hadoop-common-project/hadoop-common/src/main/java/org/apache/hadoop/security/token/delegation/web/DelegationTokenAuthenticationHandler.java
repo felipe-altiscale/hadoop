@@ -291,6 +291,8 @@ public abstract class DelegationTokenAuthenticationHandler
                     "[{2}]", request.getMethod(), dtOp, dtOp.getHttpMethod()));
         requestContinues = false;
       }
+    } else {
+      requestContinues = authHandler.managementOperation(token, request, response);
     }
     return requestContinues;
   }
