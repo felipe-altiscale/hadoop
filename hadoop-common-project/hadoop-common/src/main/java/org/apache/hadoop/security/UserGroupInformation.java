@@ -1576,8 +1576,12 @@ public class UserGroupInformation {
         (groups.getGroups(getShortUserName()));
       return result.toArray(new String[result.size()]);
     } catch (IOException ie) {
-      LOG.warn("No groups available for user " + getShortUserName());
-      return new String[0];
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Failed to get groups for user " + getShortUserName()
+            + " by " + ie);
+        LOG.trace("TRACE", ie);
+      }
+      return StringUtils.emptyStringArray;
     }
   }
   
