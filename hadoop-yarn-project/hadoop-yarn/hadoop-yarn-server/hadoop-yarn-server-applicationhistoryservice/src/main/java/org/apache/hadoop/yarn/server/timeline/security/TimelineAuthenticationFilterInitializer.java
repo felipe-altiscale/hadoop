@@ -23,7 +23,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -54,6 +57,7 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
    * The configuration prefix of timeline HTTP authentication
    */
   public static final String PREFIX = "yarn.timeline-service.http-authentication.";
+  private static final Log LOG = LogFactory.getLog(TimelineAuthenticationFilter.class);
 
   @VisibleForTesting
   Map<String, String> filterConfig;
@@ -97,12 +101,27 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
     }
 
     String authType = filterConfig.get(AuthenticationFilter.AUTH_TYPE);
+
+
+    LOG.info("AuthType Configured: "+authType);
     if (authType.equals(PseudoAuthenticationHandler.TYPE)) {
+
       filterConfig.put(AuthenticationFilter.AUTH_TYPE,
           PseudoDelegationTokenAuthenticationHandler.class.getName());
-    } else if (authType.equals(KerberosAuthenticationHandler.TYPE)) {
-      filterConfig.put(AuthenticationFilter.AUTH_TYPE,
+        LOG.info("AuthType: PseudoDelegationTokenAuthenticationHandler");
+
+    } else if (authType.equals(KerberosAuthenticationHandler.TYPE) || (UserGroupInformation.isSecurityEnabled() && conf.get("hadoop.security.authentication").equals(KerberosAuthenticationHandler.TYPE))) {
+
+      if (!(authType.equals(KerberosAuthenticationHandler.TYPE))) {
+        filterConfig.put(AuthenticationFilter.AUTH_TYPE,
+          authType);
+        LOG.info("AuthType: "+authType);
+      } else {
+        filterConfig.put(AuthenticationFilter.AUTH_TYPE,
           KerberosDelegationTokenAuthenticationHandler.class.getName());
+        LOG.info("AuthType: KerberosDelegationTokenAuthenticationHandler");
+      }
+
 
       // Resolve _HOST into bind address
       String bindAddress = conf.get(HttpServer2.BIND_ADDRESS);
@@ -127,4 +146,5 @@ public class TimelineAuthenticationFilterInitializer extends FilterInitializer {
         TimelineAuthenticationFilter.class.getName(),
         filterConfig);
   }
+
 }
