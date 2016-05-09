@@ -409,26 +409,34 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
   @Override
   public void reserveSpaceForRbw(long bytesToReserve) {
-    if (bytesToReserve != 0) {
-      reservedForRbw.addAndGet(bytesToReserve);
-    }
+/* HD-1598. File Write errors
+
+    Datanode side accounting of dfsUsed, numBlocks and reservedBytes is a joke. I propose internally we ignore reservations and wait for it to be done properly in the community. If the improper accounting of dfsUsed and numBlocks causes issues, we should look to ignore those too in the future. Not doing that just yet. Here are some of the issues reported already (and many more exist which have not been reported)
+
+    https://issues.apache.org/jira/browse/HDFS-9530
+    https://issues.apache.org/jira/browse/HDFS-6489
+    https://issues.apache.org/jira/browse/HDFS-10271
+*/
+//    if (bytesToReserve != 0) {
+//      reservedForRbw.addAndGet(bytesToReserve);
+//    }
   }
 
   @Override
   public void releaseReservedSpace(long bytesToRelease) {
-    if (bytesToRelease != 0) {
-
-      long oldReservation, newReservation;
-      do {
-        oldReservation = reservedForRbw.get();
-        newReservation = oldReservation - bytesToRelease;
-        if (newReservation < 0) {
-          // Failsafe, this should never occur in practice, but if it does we don't
-          // want to start advertising more space than we have available.
-          newReservation = 0;
-        }
-      } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
-    }
+//    if (bytesToRelease != 0) {
+//
+//      long oldReservation, newReservation;
+//      do {
+//        oldReservation = reservedForRbw.get();
+//        newReservation = oldReservation - bytesToRelease;
+//        if (newReservation < 0) {
+//          // Failsafe, this should never occur in practice, but if it does we don't
+//          // want to start advertising more space than we have available.
+//          newReservation = 0;
+//        }
+//      } while (!reservedForRbw.compareAndSet(oldReservation, newReservation));
+//    }
   }
 
   private enum SubdirFilter implements FilenameFilter {
