@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Text;
 public class WebHdfsDtFetcher extends HdfsDtFetcher {
   private static final Log LOG = LogFactory.getLog(WebHdfsDtFetcher.class);
 
-  private static final String SERVICE_NAME = WebHdfsConstants.WEBHDFS_SCHEME;
+  private static final String SERVICE_NAME = WebHdfsFileSystem.SCHEME;
 
   @Override
   public Text getServiceName() {
