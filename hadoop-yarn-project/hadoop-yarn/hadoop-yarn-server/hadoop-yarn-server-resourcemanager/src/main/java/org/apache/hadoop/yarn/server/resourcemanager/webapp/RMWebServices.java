@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -102,6 +103,8 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.NodeLabel;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
@@ -111,6 +114,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
@@ -132,6 +136,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FairSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.FifoSchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LocalResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeCapacity;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
@@ -741,7 +746,82 @@ public class RMWebServices {
 
     return Response.status(Status.OK).entity(ret).build();
   }
-  
+
+  // Copy-paste job from updateAppQueue() above . Almost exactly the same
+  // pattern as YARN-1702. Refactor the common security code if you want to
+  // merge upstream
+  // can't return POJO because we can't control the status code
+  // it's always set to 200 when we need to allow it to be set
+  // to 202
+  @PUT
+  @Path("/node/{nodeid}/vcores")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public Response updateNodeCapacity(NodeCapacity targetCapacity,
+      @Context HttpServletRequest hsr, @PathParam("nodeid") String nodeId)
+      throws AuthorizationException, YarnException, InterruptedException,
+      IOException {
+
+    init();
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    if (callerUGI == null) {
+      String msg = "Unable to obtain user name, user not authenticated";
+      throw new AuthorizationException(msg);
+    }
+
+    if (UserGroupInformation.isSecurityEnabled() && isStaticUser(callerUGI)) {
+      String msg = "The default static user cannot carry out this operation.";
+      return Response.status(Status.FORBIDDEN).entity(msg).build();
+    }
+
+    String userName = callerUGI.getUserName();
+    RMNode node = null;
+    NodeId nId = ConverterUtils.toNodeId(nodeId);
+    node = rm.getRMContext().getRMNodes().get(nId);
+    if(node == null) {
+      RMAuditLogger.logFailure(userName, AuditConstants.UPDATE_NODE_RESOURCES,
+        "UNKNOWN", "RMWebService", "Trying to change unknown node " + nodeId);
+      throw new BadRequestException("Couldn't find node " + nodeId);
+    }
+
+    //TODO(raviprak) : See if you want to change memory too
+    int memory = node.getTotalCapability().getMemory();
+    int vCores = targetCapacity.getVCores();
+    Resource resource = Resource.newInstance(memory, vCores);
+    ResourceOption resourceOption = ResourceOption.newInstance(resource, -1);
+    Map<NodeId, ResourceOption> map = new HashMap<>();
+    map.put(node.getNodeID(), resourceOption);
+    final UpdateNodeResourceRequest req =
+      UpdateNodeResourceRequest.newInstance(map);
+
+    try {
+      callerUGI.doAs(new PrivilegedExceptionAction<UpdateNodeResourceResponse>() {
+        @Override
+        public UpdateNodeResourceResponse run()
+          throws IOException, YarnException {
+          return rm.getRMContext().getRMAdminService().updateNodeResource(req);
+        }
+      });
+    } catch (UndeclaredThrowableException ue) {
+      // if the root cause is a permissions issue
+      // bubble that up to the user
+      if (ue.getCause() instanceof YarnException) {
+        YarnException ye = (YarnException) ue.getCause();
+        if (ye.getCause() instanceof AccessControlException) {
+          String msg =
+              "Unauthorized attempt to update node capacity for " + nodeId
+                  + " by remote user " + userName;
+          return Response.status(Status.FORBIDDEN).entity(msg).build();
+        } else {
+          throw ue;
+        }
+      } else {
+        throw ue;
+      }
+    }
+    return Response.status(Status.OK).build();
+  }
+
   @GET
   @Path("/get-node-to-labels")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
