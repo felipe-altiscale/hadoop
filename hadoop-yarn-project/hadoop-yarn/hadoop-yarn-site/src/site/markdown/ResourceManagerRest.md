@@ -1761,6 +1761,70 @@ Response Body:
 </node>
 ```
 
+Cluster Node Update APIs
+------------------------
+
+You can update the resources reported from a Nodemanager using this API. To perform the node update, you must have authentication set up (static web user won't work) and have permissions to call the ResourceManager Admin commands as that user. The response is empty with a 202 or 200 status
+
+### URI
+
+      * http://<rm http address:port>/ws/v1/cluster/node/{nodeId}/vcores
+      * (This url is case sensitive)
+
+### HTTP Operations Supported
+
+      * PUT
+
+### Query Parameters Supported
+
+      None
+
+### Elements of the NodeCapacity object
+
+The NodeCapacity request must contain the following elements. Please see hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/dao/NodeCapacity.java:
+
+| Item | Data Type | Description |
+|:---- |:---- |:---- |
+| vCores | int | The number of virtual Cores available on the nodemanager identified by nodeId |
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      PUT http://<rm http address:port>/ws/v1/cluster/<nodemanager:port>/vcores
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```json
+```
+
+**XML response**
+
+HTTP Request:
+
+      PUT http://<rm http address:port>/ws/v1/cluster/<nodemanager:port>/vcores
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 248
+      Server: Jetty(6.1.26)
+
+Response Body:
+
+```xml
+```
+
 Cluster Writeable APIs
 ----------------------
 
