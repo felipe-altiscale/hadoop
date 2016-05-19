@@ -54,6 +54,7 @@ public class RMAuditLogger {
     public static final String UNREGISTER_AM = "Unregister App Master";
     public static final String ALLOC_CONTAINER = "AM Allocated Container";
     public static final String RELEASE_CONTAINER = "AM Released Container";
+    public static final String UPDATE_NODE_RESOURCES = "Update Node Resources";
 
     // Some commonly used descriptions
     public static final String UNAUTHORIZED_USER = "Unauthorized user";
