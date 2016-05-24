@@ -15,27 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.web.resources;
 
-/** Represents delegation token used for authentication. */
-public class DelegationParam extends StringParam {
-  /** Parameter name. */
-  public static final String NAME = "delegation";
-  /** Default parameter value. */
-  public static final String DEFAULT = "";
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-  private static final Domain DOMAIN = new Domain(NAME, null);
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
-  public DelegationParam(final String str) {
-    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
+@XmlRootElement(name = "nodecapacity")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class NodeCapacity {
+
+  int vCores;
+
+  public NodeCapacity() {
   }
 
-  @Override
-  public String getName() {
-    return NAME;
+  public NodeCapacity(int vCores) {
+    this.vCores = vCores;
   }
+
+  public void setVCores(int vCores) {
+    this.vCores = vCores;
+  }
+
+  public int getVCores() {
+    return this.vCores;
+  }
+
 }

@@ -15,27 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.web.resources;
+package org.apache.hadoop.security.token;
 
-/** Represents delegation token used for authentication. */
-public class DelegationParam extends StringParam {
-  /** Parameter name. */
-  public static final String NAME = "delegation";
-  /** Default parameter value. */
-  public static final String DEFAULT = "";
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.DtFetcher;
 
-  private static final Domain DOMAIN = new Domain(NAME, null);
-
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
-  public DelegationParam(final String str) {
-    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
+public class TestDtFetcher implements DtFetcher {
+  public Text getServiceName() {
+    return TestDtUtilShell.SERVICE_GET;
   }
 
-  @Override
-  public String getName() {
-    return NAME;
+  public boolean isTokenRequired() {
+    return true;
+  }
+
+  public Token<?> addDelegationTokens(Configuration conf,
+      Credentials creds, String renewer, String url) throws Exception {
+    creds.addToken(TestDtUtilShell.MOCK_TOKEN.getService(),
+                   TestDtUtilShell.MOCK_TOKEN);
+    return TestDtUtilShell.MOCK_TOKEN;
   }
 }

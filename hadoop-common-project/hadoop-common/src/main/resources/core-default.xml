@@ -417,6 +417,12 @@ for ldap providers in the same way as above does.
   <description>Maps kerberos principals to local user names</description>
 </property>
 
+<property>
+  <name>hadoop.token.files</name>
+  <value></value>
+  <description>List of token cache files that have delegation tokens for hadoop service</description>
+</property>
+
 <!-- i/o properties -->
 <property>
   <name>io.file.buffer.size</name>
@@ -814,6 +820,15 @@ for ldap providers in the same way as above does.
   <name>fs.s3a.multipart.threshold</name>
   <value>2147483647</value>
   <description>Threshold before uploads or copies use parallel multipart operations.</description>
+</property>
+
+<property>
+  <name>fs.s3a.multiobjectdelete.enable</name>
+  <value>true</value>
+  <description>When enabled, multiple single-object delete requests are replaced by
+    a single 'delete multiple objects'-request, reducing the number of requests.
+    Beware: legacy S3-compatible object stores might not support this request.
+  </description>
 </property>
 
 <property>
