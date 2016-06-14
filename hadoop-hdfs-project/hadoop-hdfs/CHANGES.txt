@@ -260,6 +260,9 @@ Release 2.7.2 - 2016-01-25
 
   BUG FIXES
 
+    HDFS-8581. ContentSummary on / skips further counts on yielding lock
+    (J.Andreina via vinayakumarb)
+
     HDFS-2956. calling fetchdt without a --renewer argument throws NPE
     (vinayakumarb)
 
