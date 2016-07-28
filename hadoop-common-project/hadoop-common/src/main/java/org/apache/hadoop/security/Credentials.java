@@ -241,8 +241,8 @@ public class Credentials implements Writable {
   public void writeTokenStorageToStream(DataOutputStream os)
       throws IOException {
     os.write(TOKEN_STORAGE_MAGIC);
-    os.write(TOKEN_STORAGE_VERSION);
-    writeProto(os);
+    os.write(OLD_TOKEN_STORAGE_VERSION);
+    write(os);
   }
 
   public void writeTokenStorageFile(Path filename,
