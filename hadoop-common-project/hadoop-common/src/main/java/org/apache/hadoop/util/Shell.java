@@ -236,8 +236,26 @@ abstract public class Shell {
 
   /** Return a command to send a signal to a given pid */
   public static String[] getSignalKillCommand(int code, String pid) {
-    return Shell.WINDOWS ? new String[] { Shell.WINUTILS, "task", "kill", pid } :
-      new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
+    // Code == 0 means check alive
+    if (Shell.WINDOWS) {
+      if (0 == code) {
+        return new String[] {Shell.getWinUtilsPath(), "task", "isAlive", pid };
+      } else {
+        return new String[] {Shell.getWinUtilsPath(), "task", "kill", pid };
+      }
+    }
+
+    // Use the bash-builtin instead of the Unix kill command (usually
+    // /bin/kill) as the bash-builtin supports "--" in all Hadoop supported
+    // OSes.
+    final String quotedPid = bashQuote(pid);
+    if (isSetsidAvailable) {
+      return new String[] { "bash", "-c", "kill -" + code + " -- -" +
+          quotedPid };
+    } else {
+      return new String[] { "bash", "-c", "kill -" + code + " " +
+          quotedPid };
+    }
   }
 
   /** Return a regular expression string that match environment variables */
