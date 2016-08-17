@@ -283,6 +283,15 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String HADOOP_TOKEN_FILES =
       "hadoop.token.files";
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS =
+      "hadoop.security.sensitive-config-keys";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS_DEFAULT =
+      "password$" + "," +
+      "fs.s3.*[Ss]ecret.?[Kk]ey" + "," +
+      "fs.azure\\.account.key.*" + "," +
+      "dfs.webhdfs.oauth2.[a-z]+.token" + "," +
+      HADOOP_SECURITY_SENSITIVE_CONFIG_KEYS;
 
   @Deprecated
   /** Only used by HttpServer. */
