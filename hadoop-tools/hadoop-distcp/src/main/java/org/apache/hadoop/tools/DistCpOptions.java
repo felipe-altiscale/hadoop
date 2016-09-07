@@ -47,7 +47,7 @@ public class DistCpOptions {
   public static final int maxNumListstatusThreads = 40;
   private int numListstatusThreads = 0;  // Indicates that flag is not set.
   private int maxMaps = DistCpConstants.DEFAULT_MAPS;
-  private int mapBandwidth = DistCpConstants.DEFAULT_BANDWIDTH_MB;
+  private int mapBandwidth = 0;  // Indicates that we should use the default.
 
   private String sslConfigurationFile;
 
@@ -619,8 +619,10 @@ public class DistCpOptions {
         String.valueOf(useDiff));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.SKIP_CRC,
         String.valueOf(skipCRC));
-    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
-        String.valueOf(mapBandwidth));
+    if (mapBandwidth > 0) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BANDWIDTH,
+          String.valueOf(mapBandwidth));
+    }
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.PRESERVE_STATUS,
         DistCpUtils.packAttributes(preserveStatus));
   }
