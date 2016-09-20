@@ -82,8 +82,23 @@ abstract public class Shell {
     }
   }
 
-  /** a Unix command to get the current user's name */
-  public final static String USER_NAME_COMMAND = "whoami";
+  /**
+   * Quote the given arg so that bash will interpret it as a single value.
+   * Note that this quotes it for one level of bash, if you are passing it
+   * into a badly written shell script, you need to fix your shell script.
+   * @param arg the argument to quote
+   * @return the quoted string
+   */
+  static String bashQuote(String arg) {
+    StringBuilder buffer = new StringBuilder(arg.length() + 2);
+    buffer.append('\'');
+    buffer.append(arg.replace("'", "'\\''"));
+    buffer.append('\'');
+    return buffer.toString();
+  }
+
+  /** a Unix command to get the current user's name: {@value}. */
+  public static final String USER_NAME_COMMAND = "whoami";
 
   /** Windows CreateProcess synchronization object */
   public static final Object WindowsProcessLaunchLock = new Object();
@@ -133,7 +148,7 @@ abstract public class Shell {
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
     return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
-                    : new String[]{"bash", "-c", "groups"};
+                    : new String[]{"groups"};
   }
 
   /**
@@ -143,17 +158,21 @@ abstract public class Shell {
    * i.e. the user's primary group will be included twice.
    */
   public static String[] getGroupsForUserCommand(final String user) {
-    //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String[] { WINUTILS, "groups", "-F", "\"" + user + "\""}
-                    : new String [] {"bash", "-c", "id -gn " + user
-                                     + "&& id -Gn " + user};
+    //'groups username' command return is inconsistent across different unixes
+    if (WINDOWS) {
+      return new String[]
+          {getWinUtilsPath(), "groups", "-F", "\"" + user + "\""};
+    } else {
+      String quotedUser = bashQuote(user);
+      return new String[] {"bash", "-c", "id -gn " + quotedUser +
+                            "; id -Gn " + quotedUser};
+    }
   }
 
   /** a Unix command to get a given netgroup's user list */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}
-                    : new String [] {"bash", "-c", "getent netgroup " + netgroup};
+    return new String[] {"getent", "netgroup", netgroup};
   }
 
   /** Return a command to get permission information. */
@@ -216,8 +235,26 @@ abstract public class Shell {
 
   /** Return a command to send a signal to a given pid */
   public static String[] getSignalKillCommand(int code, String pid) {
-    return Shell.WINDOWS ? new String[] { Shell.WINUTILS, "task", "kill", pid } :
-      new String[] { "kill", "-" + code, isSetsidAvailable ? "-" + pid : pid };
+    // Code == 0 means check alive
+    if (Shell.WINDOWS) {
+      if (0 == code) {
+        return new String[] {Shell.getWinUtilsPath(), "task", "isAlive", pid };
+      } else {
+        return new String[] {Shell.getWinUtilsPath(), "task", "kill", pid };
+      }
+    }
+
+    // Use the bash-builtin instead of the Unix kill command (usually
+    // /bin/kill) as the bash-builtin supports "--" in all Hadoop supported
+    // OSes.
+    final String quotedPid = bashQuote(pid);
+    if (isSetsidAvailable) {
+      return new String[] { "bash", "-c", "kill -" + code + " -- -" +
+          quotedPid };
+    } else {
+      return new String[] { "bash", "-c", "kill -" + code + " " +
+          quotedPid };
+    }
   }
 
   /** Return a regular expression string that match environment variables */
@@ -259,8 +296,9 @@ abstract public class Shell {
    */
   public static String[] getRunScriptCommand(File script) {
     String absolutePath = script.getAbsolutePath();
-    return WINDOWS ? new String[] { "cmd", "/c", absolutePath } :
-      new String[] { "/bin/bash", absolutePath };
+    return WINDOWS ?
+      new String[] {"cmd", "/c", absolutePath }
+      : new String[] {"/bin/bash", bashQuote(absolutePath) };
   }
 
   /** a Unix command to set permission */
@@ -719,7 +757,13 @@ abstract public class Shell {
 
     /** Execute the shell command. */
     public void execute() throws IOException {
-      this.run();    
+      for (String s : command) {
+        if (s == null) {
+          throw new IOException("(null) entry in command string: "
+              + StringUtils.join(" ", command));
+        }
+      }
+      this.run();
     }
 
     @Override
