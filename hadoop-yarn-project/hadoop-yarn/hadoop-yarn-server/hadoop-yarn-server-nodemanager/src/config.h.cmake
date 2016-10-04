@@ -20,6 +20,11 @@
 
 #cmakedefine HADOOP_CONF_DIR "@HADOOP_CONF_DIR@"
 
-#cmakedefine HAVE_FCLOSEALL "@HAVE_FCLOSEALL@"
+#cmakedefine HAVE_FCLOSEALL @HAVE_FCLOSEALL@
+#cmakedefine HAVE_SYSCTL @HAVE_SYSCTL@
+
+/* specific headers */
+
+#cmakedefine HAVE_SYS_SYSCTL_H @HAVE_SYS_SYSCTL_H@
 
 #endif

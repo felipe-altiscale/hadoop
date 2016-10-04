@@ -20,8 +20,28 @@ set(CMAKE_BUILD_TYPE, Release)
 
 include(../../../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
+# determine if container-executor.conf.dir is an absolute
+# path in case the OS we're compiling on doesn't have
+# a hook in get_executable. We'll use this define
+# later in the code to potentially throw a compile error
+string(REGEX MATCH . HCD_ONE "${HADOOP_CONF_DIR}")
+string(COMPARE EQUAL ${HCD_ONE} / HADOOP_CONF_DIR_IS_ABS)
+
+include(CheckIncludeFiles)
+check_include_files("sys/types.h;sys/sysctl.h" HAVE_SYS_SYSCTL_H)
+
 include(CheckFunctionExists)
 CHECK_FUNCTION_EXISTS(fcloseall HAVE_FCLOSEALL)
+
+include(CheckSymbolExists)
+check_symbol_exists(sysctl "sys/types.h;sys/sysctl.h" HAVE_SYSCTL)
+
+if(APPLE)
+  include_directories( /System/Library/Frameworks )
+  find_library(COCOA_LIBRARY Cocoa)
+  mark_as_advanced(COCOA_LIBRARY)
+  set(EXTRA_LIBS ${COCOA_LIBRARY})
+endif(APPLE)
 
 function(output_directory TGT DIR)
     SET_TARGET_PROPERTIES(${TGT} PROPERTIES
@@ -47,13 +67,14 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 add_library(container
     main/native/container-executor/impl/configuration.c
     main/native/container-executor/impl/container-executor.c
+    main/native/container-executor/impl/get_executable.c
 )
 
 add_executable(container-executor
     main/native/container-executor/impl/main.c
 )
 target_link_libraries(container-executor
-    container
+    container ${EXTRA_LIBS}
 )
 output_directory(container-executor target/usr/local/bin)
 
@@ -61,6 +82,6 @@ add_executable(test-container-executor
     main/native/container-executor/test/test-container-executor.c
 )
 target_link_libraries(test-container-executor
-    container
+    container ${EXTRA_LIBS}
 )
 output_directory(test-container-executor target/usr/local/bin)
