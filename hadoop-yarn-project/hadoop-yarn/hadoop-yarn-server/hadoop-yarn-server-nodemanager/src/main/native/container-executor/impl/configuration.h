@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
+#ifdef __FreeBSD__
+#define _WITH_GETLINE
+#endif
+
 #include <stddef.h>
+
+/** Define a platform-independent constant instead of using PATH_MAX */
+
+#define EXECUTOR_PATH_MAX 4096
 
 /**
  * Ensure that the configuration file and all of the containing directories
