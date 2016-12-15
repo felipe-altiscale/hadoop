@@ -567,6 +567,14 @@ public abstract class AbstractYarnScheduler
           + " from: " + oldResource + ", to: "
           + newResource);
 
+      try {
+        // Notify NodeLabelsManager about this change
+        rmContext.getNodeLabelManager().updateNodeResource(nm.getNodeID(),
+          newResource);
+      } catch(IOException ioe) {
+          LOG.warn("Failed to update node's resources in the LabelManager");
+      }
+
       nodes.remove(nm.getNodeID());
       updateMaximumAllocation(node, false);
 
