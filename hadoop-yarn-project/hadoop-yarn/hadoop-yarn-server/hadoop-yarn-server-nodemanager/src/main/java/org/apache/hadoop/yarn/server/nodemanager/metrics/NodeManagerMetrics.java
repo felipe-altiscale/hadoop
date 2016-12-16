@@ -123,6 +123,12 @@ public class NodeManagerMetrics {
     availableVCores.incr(res.getVirtualCores());
   }
 
+  public void setResource(Resource res) {
+    availableMB = res.getMemory();
+    availableGB.set((int) Math.floor(availableMB/1024d));
+    availableVCores.set(res.getVirtualCores());
+  }
+
   public void addContainerLaunchDuration(long value) {
     containerLaunchDuration.add(value);
   }

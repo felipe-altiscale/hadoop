@@ -252,7 +252,29 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected void registerWithRM()
       throws YarnException, IOException {
+
+    // HD-1661. Re-read the NodeManager yarn-site.xml for possibly updated
+    // values of memory and cores. This may be triggered by restarting the RM
+    // without restarting the NodeManger.
+    Configuration conf = new YarnConfiguration();
+    int memoryMb = conf.getInt(YarnConfiguration.NM_PMEM_MB,
+      YarnConfiguration.DEFAULT_NM_PMEM_MB);
+
+    int virtualCores = conf.getInt(YarnConfiguration.NM_VCORES,
+      YarnConfiguration.DEFAULT_NM_VCORES);
+
+    Resource totalResource = Resource.newInstance(memoryMb, virtualCores);
+    if( !totalResource.equals(this.totalResource) ) {
+      LOG.info("Found updated resource from " + this.totalResource + " to " +
+        totalResource);
+      metrics.setResource(totalResource);
+      this.totalResource = totalResource;
+    } else {
+      LOG.info("Didn't find any changes in resources available to this node");
+    }
+
     List<NMContainerStatus> containerReports = getNMContainerStatuses();
+
     RegisterNodeManagerRequest request =
         RegisterNodeManagerRequest.newInstance(nodeId, httpPort, totalResource,
           nodeManagerVersionId, containerReports, getRunningApplications());
