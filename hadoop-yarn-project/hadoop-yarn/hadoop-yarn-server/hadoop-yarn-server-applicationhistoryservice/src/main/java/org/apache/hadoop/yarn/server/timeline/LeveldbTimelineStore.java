@@ -175,6 +175,12 @@ public class LeveldbTimelineStore extends AbstractService
     super(LeveldbTimelineStore.class.getName());
   }
 
+  private JniDBFactory factory;
+
+  void setTestFactory(JniDBFactory fact) {
+    this.factory = fact;
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   protected void serviceInit(Configuration conf) throws Exception {
@@ -209,7 +215,10 @@ public class LeveldbTimelineStore extends AbstractService
     options.cacheSize(conf.getLong(
         YarnConfiguration.TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_READ_CACHE_SIZE));
-    JniDBFactory factory = new JniDBFactory();
+    if(factory == null) {
+      factory = new JniDBFactory();
+    }
+
     Path dbPath = new Path(
         conf.get(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH), FILENAME);
     FileSystem localFS = null;
@@ -226,7 +235,13 @@ public class LeveldbTimelineStore extends AbstractService
       IOUtils.cleanup(LOG, localFS);
     }
     LOG.info("Using leveldb path " + dbPath);
-    db = factory.open(new File(dbPath.toString()), options);
+    try {
+      db = factory.open(new File(dbPath.toString()), options);
+    } catch (IOException ioe) {
+      LOG.warn("Incurred exception while loading LevelDb database. Going to try repair", ioe);
+      factory.repair(new File(dbPath.toString()), options);
+      db = factory.open(new File(dbPath.toString()), options);
+    }
     checkVersion();
     startTimeWriteCache =
         Collections.synchronizedMap(new LRUMap(getStartTimeWriteCacheSize(
