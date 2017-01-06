@@ -46,11 +46,14 @@ import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.timeline.LeveldbTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.NameValuePair;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
+import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DBException;
+import org.iq80.leveldb.Options;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -467,4 +470,30 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
         .iterator().next().size());
   }
 
+  @Test
+  public void testLevelDbRepair() throws IOException {
+    LeveldbTimelineStore store = new LeveldbTimelineStore();
+
+    JniDBFactory factory = Mockito.mock(JniDBFactory.class);
+    Mockito.when(
+        factory.open(Mockito.any(File.class), Mockito.any(Options.class)))
+        .thenThrow(new IOException()).thenCallRealMethod();
+    store.setTestFactory(factory);
+
+    //Create the LevelDb in a different location
+    File path = new File("target", this.getClass().getSimpleName() +
+        "-tmpDir1").getAbsoluteFile();
+    Configuration conf = new Configuration(this.config);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_LEVELDB_PATH,
+      path.getAbsolutePath());
+
+    try {
+      store.init(conf);
+      Mockito.verify(factory, Mockito.times(1))
+          .repair(Mockito.any(File.class), Mockito.any(Options.class));
+    } finally {
+      store.stop();
+      fsContext.delete(new Path(path.getAbsolutePath()), true);
+    }
+  }
 }
