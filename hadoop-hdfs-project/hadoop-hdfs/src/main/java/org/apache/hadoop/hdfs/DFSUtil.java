@@ -1142,7 +1142,8 @@ public class DFSUtil {
    */
   public static Collection<URI> getUniqueNameServiceUris(Configuration conf,
       String... keys) {
-    return ipizeAndRemoveDuplicates(getNameServiceUris(conf, keys));
+    return ipizeAndRemoveDuplicates(getNameServiceUris(conf,
+      getInternalNameServices(conf), keys));
   }
 
   /**
