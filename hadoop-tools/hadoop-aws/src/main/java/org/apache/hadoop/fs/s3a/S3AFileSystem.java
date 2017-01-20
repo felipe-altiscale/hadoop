@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -154,7 +155,7 @@ public class S3AFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
 
-    uri = URI.create(name.getScheme() + "://" + name.getAuthority());
+    uri = URI.create(name.getScheme() + "://" + name.getRawAuthority());
     workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this.uri,
         this.getWorkingDirectory());
 
@@ -345,7 +346,10 @@ public class S3AFileSystem extends FileSystem {
       throws IOException {
     String accessKey = null;
     String secretKey = null;
-    String userInfo = name.getUserInfo();
+    // We have to do this idiocy because Path F us over. 
+    // https://github.com/Altiscale/hadoop/blob/cbbdd2ff5df50e6598d1912cb5c0daf8a6a9feea/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/Path.java#L202
+    // As you can see, authority is not decoded and simply used to create a new URI.
+    String userInfo = URLDecoder.decode(name.getUserInfo(), "UTF-8");
     if (userInfo != null) {
       int index = userInfo.indexOf(':');
       if (index != -1) {
