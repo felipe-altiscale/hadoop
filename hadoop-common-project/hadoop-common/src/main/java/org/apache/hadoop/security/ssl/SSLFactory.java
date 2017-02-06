@@ -60,6 +60,8 @@ public class SSLFactory implements ConnectionConfigurator {
     "hadoop.ssl.client.conf";
   public static final String SSL_SERVER_CONF_KEY =
     "hadoop.ssl.server.conf";
+  public static final String SSL_SERVER_CONF_DEFAULT = "ssl-server.xml";
+
   public static final String SSLCERTIFICATE = IBM_JAVA?"ibmX509":"SunX509"; 
 
   public static final boolean DEFAULT_SSL_REQUIRE_CLIENT_CERT = false;
@@ -70,6 +72,30 @@ public class SSLFactory implements ConnectionConfigurator {
   public static final String SSL_ENABLED_PROTOCOLS =
       "hadoop.ssl.enabled.protocols";
   public static final String DEFAULT_SSL_ENABLED_PROTOCOLS = "TLSv1";
+
+  public static final String SSL_SERVER_NEED_CLIENT_AUTH =
+      "ssl.server.need.client.auth";
+  public static final boolean SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT = false;
+
+  public static final String SSL_SERVER_KEYSTORE_LOCATION =
+      "ssl.server.keystore.location";
+  public static final String SSL_SERVER_KEYSTORE_PASSWORD =
+      "ssl.server.keystore.password";
+  public static final String SSL_SERVER_KEYSTORE_TYPE =
+      "ssl.server.keystore.type";
+  public static final String SSL_SERVER_KEYSTORE_TYPE_DEFAULT = "jks";
+  public static final String SSL_SERVER_KEYSTORE_KEYPASSWORD =
+      "ssl.server.keystore.keypassword";
+
+  public static final String SSL_SERVER_TRUSTSTORE_LOCATION =
+      "ssl.server.truststore.location";
+  public static final String SSL_SERVER_TRUSTSTORE_PASSWORD =
+      "ssl.server.truststore.password";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE =
+      "ssl.server.truststore.type";
+  public static final String SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT = "jks";
+  public static final String SSL_SERVER_EXCLUDE_CIPHER_LIST =
+      "ssl.server.exclude.cipher.list";
 
   private Configuration conf;
   private Mode mode;
@@ -95,7 +121,7 @@ public class SSLFactory implements ConnectionConfigurator {
     this.mode = mode;
     requireClientCert = conf.getBoolean(SSL_REQUIRE_CLIENT_CERT_KEY,
                                         DEFAULT_SSL_REQUIRE_CLIENT_CERT);
-    Configuration sslConf = readSSLConfiguration(mode);
+    Configuration sslConf = readSSLConfiguration(mode, conf);
 
     Class<? extends KeyStoresFactory> klass
       = conf.getClass(KEYSTORES_FACTORY_CLASS_KEY,
@@ -106,9 +132,10 @@ public class SSLFactory implements ConnectionConfigurator {
         DEFAULT_SSL_ENABLED_PROTOCOLS);
   }
 
-  private Configuration readSSLConfiguration(Mode mode) {
+  public static Configuration readSSLConfiguration(Mode mode, Configuration conf) {
     Configuration sslConf = new Configuration(false);
-    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, requireClientCert);
+    sslConf.setBoolean(SSL_REQUIRE_CLIENT_CERT_KEY, conf.getBoolean(
+        SSL_REQUIRE_CLIENT_CERT_KEY, false));
     String sslConfResource;
     if (mode == Mode.CLIENT) {
       sslConfResource = conf.get(SSL_CLIENT_CONF_KEY, "ssl-client.xml");
