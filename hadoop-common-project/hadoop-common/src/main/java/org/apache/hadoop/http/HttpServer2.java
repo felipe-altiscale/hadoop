@@ -59,6 +59,7 @@ import org.apache.hadoop.security.authentication.util.FileSignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.RandomSignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.ZKSignerSecretProvider;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.ssl.SslSelectChannelConnectorSecure;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
@@ -114,6 +115,9 @@ import static org.apache.hadoop.security.authentication.server
 public final class HttpServer2 implements FilterContainer {
   public static final Log LOG = LogFactory.getLog(HttpServer2.class);
 
+  public static final String HTTP_SCHEME = "http";
+  public static final String HTTPS_SCHEME = "https";
+
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
   public static final String HTTP_MAX_THREADS = "hadoop.http.max.threads";
@@ -149,6 +153,7 @@ public final class HttpServer2 implements FilterContainer {
     private ArrayList<URI> endpoints = Lists.newArrayList();
     private String name;
     private Configuration conf;
+    private Configuration sslConf;
     private String[] pathSpecs;
     private AccessControlList adminsAcl;
     private boolean securityEnabled = false;
@@ -241,6 +246,15 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    /**
+     * Specify the SSL configuration to load. This API provides an alternative
+     * to keyStore/keyPassword/trustStore.
+     */
+    public Builder setSSLConf(Configuration sslCnf) {
+      this.sslConf = sslCnf;
+      return this;
+    }
+
     public Builder setPathSpec(String[] pathSpec) {
       this.pathSpecs = pathSpec;
       return this;
@@ -281,6 +295,56 @@ public final class HttpServer2 implements FilterContainer {
       return this;
     }
 
+    /**
+     * A wrapper of {@link Configuration#getPassword(String)}. It returns
+     * <code>String</code> instead of <code>char[]</code>.
+     *
+     * @param conf the configuration
+     * @param name the property name
+     * @return the password string or null
+     */
+    private static String getPasswordString(Configuration conf, String name)
+        throws IOException {
+      char[] passchars = conf.getPassword(name);
+      if (passchars == null) {
+        return null;
+      }
+      return new String(passchars);
+    }
+
+    /**
+     * Load SSL properties from the SSL configuration.
+     */
+    private void loadSSLConfiguration() throws IOException {
+      if (sslConf == null) {
+        return;
+      }
+      needsClientAuth = sslConf.getBoolean(
+          SSLFactory.SSL_SERVER_NEED_CLIENT_AUTH,
+          SSLFactory.SSL_SERVER_NEED_CLIENT_AUTH_DEFAULT);
+      keyStore = sslConf.getTrimmed(SSLFactory.SSL_SERVER_KEYSTORE_LOCATION);
+      if (keyStore == null || keyStore.isEmpty()) {
+        throw new IOException(String.format("Property %s not specified",
+            SSLFactory.SSL_SERVER_KEYSTORE_LOCATION));
+      }
+      keyStorePassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD);
+      if (keyStorePassword == null) {
+        throw new IOException(String.format("Property %s not specified",
+            SSLFactory.SSL_SERVER_KEYSTORE_PASSWORD));
+      }
+      keyStoreType = sslConf.get(SSLFactory.SSL_SERVER_KEYSTORE_TYPE,
+          SSLFactory.SSL_SERVER_KEYSTORE_TYPE_DEFAULT);
+      keyPassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_KEYSTORE_KEYPASSWORD);
+      trustStore = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_LOCATION);
+      trustStorePassword = getPasswordString(sslConf,
+          SSLFactory.SSL_SERVER_TRUSTSTORE_PASSWORD);
+      trustStoreType = sslConf.get(SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE,
+          SSLFactory.SSL_SERVER_TRUSTSTORE_TYPE_DEFAULT);
+      excludeCiphers = sslConf.get(SSLFactory.SSL_SERVER_EXCLUDE_CIPHER_LIST);
+    }
+
     public HttpServer2 build() throws IOException {
       Preconditions.checkNotNull(name, "name is not set");
       Preconditions.checkState(!endpoints.isEmpty(), "No endpoints specified");
@@ -305,6 +369,7 @@ public final class HttpServer2 implements FilterContainer {
         if ("http".equals(scheme)) {
           listener = HttpServer2.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
+          loadSSLConfiguration();
           listener = createHttpsChannelConnector();
 
         } else {
