@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import org.junit.Assert;
-
 import junit.framework.TestCase;
 import org.apache.hadoop.security.alias.AbstractJavaKeyStoreProvider;
 
@@ -196,47 +194,7 @@ public class TestShell extends TestCase {
     System.err.println("after: " + timersAfter);
     assertEquals(timersBefore, timersAfter);
   }
-
-  public void testGetCheckProcessIsAliveCommand() throws Exception {
-    String anyPid = "9999";
-    String[] checkProcessAliveCommand = getCheckProcessIsAliveCommand(
-        anyPid);
-
-    String[] expectedCommand;
-
-    if (Shell.WINDOWS) {
-      expectedCommand =
-          new String[]{getWinUtilsPath(), "task", "isAlive", anyPid };
-    } else if (Shell.isSetsidAvailable) {
-      expectedCommand = new String[] { "bash", "-c", "kill -0 -- -'" +
-            anyPid + "'"};
-    } else {
-      expectedCommand = new String[] {"bash", "-c", "kill -0 '" + anyPid +
-            "'" };
-    }
-    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
-  }
-
-  public void testGetSignalKillCommand() throws Exception {
-    String anyPid = "9999";
-    int anySignal = 9;
-    String[] checkProcessAliveCommand = getSignalKillCommand(anySignal,
-        anyPid);
-
-    String[] expectedCommand;
-
-    if (Shell.WINDOWS) {
-      expectedCommand =
-          new String[]{getWinUtilsPath(), "task", "kill", anyPid };
-    } else if (Shell.isSetsidAvailable) {
-      expectedCommand = new String[] { "bash", "-c", "kill -9 -- -'" + anyPid +
-            "'"};
-    } else {
-      expectedCommand = new String[]{ "bash", "-c", "kill -9 '" + anyPid +
-            "'"};
-    }
-    Assert.assertArrayEquals(expectedCommand, checkProcessAliveCommand);
-  }
+  
 
   private void testInterval(long interval) throws IOException {
     Command command = new Command(interval);
@@ -252,6 +210,7 @@ public class TestShell extends TestCase {
     }
   }
 
+  @Test
   public void testBashQuote() {
     assertEquals("'foobar'", Shell.bashQuote("foobar"));
     assertEquals("'foo'\\''bar'", Shell.bashQuote("foo'bar"));
