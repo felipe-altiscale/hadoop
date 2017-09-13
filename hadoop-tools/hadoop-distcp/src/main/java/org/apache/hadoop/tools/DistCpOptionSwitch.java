@@ -92,6 +92,7 @@ public enum DistCpOptionSwitch {
       new Option("numListstatusThreads", true, "Number of threads to " +
           "use for building file listing (max " +
           DistCpOptions.maxNumListstatusThreads + ").")),
+
   /**
    * Max number of maps to use during copy. DistCp will split work
    * as equally as possible among these maps

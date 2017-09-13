@@ -918,6 +918,7 @@ public class TestUserGroupInformation {
         return null;
       }
     });
+  }
 
   public void testExternalTokenFiles() throws Exception {
     StringBuilder tokenFullPathnames = new StringBuilder();
