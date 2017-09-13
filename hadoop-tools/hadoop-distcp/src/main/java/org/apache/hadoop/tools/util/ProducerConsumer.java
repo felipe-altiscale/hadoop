@@ -32,9 +32,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * ProducerConsumer class encapsulates input and output queues and a
- * thread-pool of Workers that loop on WorkRequest<T> inputQueue and for each
+ * thread-pool of Workers that loop on WorkRequest&lt;T&gt; inputQueue and for each
  * consumed WorkRequest Workers invoke WorkRequestProcessor.processItem()
- * and output resulting WorkReport<R> to the outputQueue.
+ * and output resulting WorkReport&lt;R&gt; to the outputQueue.
  */
 public class ProducerConsumer<T, R> {
   private Log LOG = LogFactory.getLog(ProducerConsumer.class);
@@ -57,9 +57,9 @@ public class ProducerConsumer<T, R> {
   }
 
   /**
-   *  Add another worker that will consume WorkRequest<T> items from input
+   *  Add another worker that will consume WorkRequest&lt;T&gt; items from input
    *  queue, process each item using supplied processor, and for every
-   *  processed item output WorkReport<R> to output queue.
+   *  processed item output WorkReport&lt;R&gt; to output queue.
    *
    *  @param processor  Processor implementing WorkRequestProcessor interface.
    *
@@ -102,7 +102,7 @@ public class ProducerConsumer<T, R> {
   /**
    *  Blocking put workRequest to ProducerConsumer input queue.
    *
-   *  @param  WorkRequest<T> item to be processed.
+   *  @param  workRequest item to be processed.
    */
   public void put(WorkRequest<T> workRequest) {
     boolean isDone = false;
@@ -120,7 +120,7 @@ public class ProducerConsumer<T, R> {
   /**
    *  Blocking take from ProducerConsumer output queue that can be interrupted.
    *
-   *  @return  WorkReport<R> item returned by processor's processItem().
+   *  @return  WorkReport&lt;R&gt; item returned by processor's processItem().
    */
   public WorkReport<R> take() throws InterruptedException {
     WorkReport<R> report = outputQueue.take();
@@ -132,7 +132,7 @@ public class ProducerConsumer<T, R> {
    *  Blocking take from ProducerConsumer output queue (catches exceptions and
    *  retries forever).
    *
-   *  @return  WorkReport<R> item returned by processor's processItem().
+   *  @return  WorkReport&lt;R&gt; item returned by processor's processItem().
    */
   public WorkReport<R> blockingTake() {
     while (true) {
