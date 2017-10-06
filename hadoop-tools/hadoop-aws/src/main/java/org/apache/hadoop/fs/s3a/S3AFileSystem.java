@@ -349,7 +349,8 @@ public class S3AFileSystem extends FileSystem {
     // We have to do this idiocy because Path F us over. 
     // https://github.com/Altiscale/hadoop/blob/cbbdd2ff5df50e6598d1912cb5c0daf8a6a9feea/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/Path.java#L202
     // As you can see, authority is not decoded and simply used to create a new URI.
-    String userInfo = URLDecoder.decode(name.getUserInfo(), "UTF-8");
+    String authString = name.getUserInfo();
+    String userInfo = authString == null ? null : URLDecoder.decode(authString, "UTF-8");
     if (userInfo != null) {
       int index = userInfo.indexOf(':');
       if (index != -1) {
