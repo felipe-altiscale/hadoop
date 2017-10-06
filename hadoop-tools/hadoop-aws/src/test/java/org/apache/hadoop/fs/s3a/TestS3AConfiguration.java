@@ -34,6 +34,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.io.IOException;
 
 import org.apache.hadoop.security.ProviderUtils;
@@ -245,6 +246,14 @@ public class TestS3AConfiguration {
         s3afs.getAWSAccessKeys(uriWithUserInfo, conf);
     assertEquals("AccessKey incorrect.", "123", creds.getAccessKey());
     assertEquals("SecretKey incorrect.", "456", creds.getAccessSecret());
+  }
+
+  @Test
+  public void testEmptyUserInfo() throws URISyntaxException, IOException {
+    final Configuration conf = new Configuration();
+    URI uriWithoutUserInfo = new URI("s3a://foobar/");
+    S3AFileSystem s3afs = new S3AFileSystem();
+    s3afs.getAWSAccessKeys(uriWithoutUserInfo, conf);
   }
 
   @Test
