@@ -150,12 +150,6 @@ Usage: `hdfs groups [username ...]`
 
 Returns the group information given one or more usernames.
 
-### `httpfs`
-
-Usage: `hdfs httpfs`
-
-Run HttpFS server, the HDFS HTTP Gateway.
-
 ### `lsSnapshottableDir`
 
 Usage: `hdfs lsSnapshottableDir [-help]`

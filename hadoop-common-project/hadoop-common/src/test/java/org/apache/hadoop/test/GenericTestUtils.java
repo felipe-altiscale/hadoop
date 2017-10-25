@@ -58,22 +58,6 @@ public abstract class GenericTestUtils {
 
   private static final AtomicInteger sequence = new AtomicInteger();
 
-  /**
-   * system property for test data: {@value}
-   */
-  public static final String SYSPROP_TEST_DATA_DIR = "test.build.data";
-
-  /**
-   * Default path for test data: {@value}
-   */
-  public static final String DEFAULT_TEST_DATA_DIR =
-      "target" + File.separator + "test" + File.separator + "data";
-
-  /**
-   * The default path for using in Hadoop path references: {@value}
-   */
-  public static final String DEFAULT_TEST_DATA_PATH = "target/test/data/";
-
   @SuppressWarnings("unchecked")
   public static void disableLog(Log log) {
     // We expect that commons-logging is a wrapper around Log4j.
@@ -128,23 +112,6 @@ public abstract class GenericTestUtils {
    */
   public static int uniqueSequenceId() {
     return sequence.incrementAndGet();
-  }
-  
-
-  /**
-   * Get the (created) base directory for tests.
-   * @return the absolute directory
-   */
-  public static File getTestDir() {
-    String prop = System.getProperty(SYSPROP_TEST_DATA_DIR, DEFAULT_TEST_DATA_DIR);
-    if (prop.isEmpty()) {
-      // corner case: property is there but empty
-      prop = DEFAULT_TEST_DATA_DIR;
-    }
-    File dir = new File(prop).getAbsoluteFile();
-    dir.mkdirs();
-    assertExists(dir);
-    return dir;
   }
   
   /**
