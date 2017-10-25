@@ -84,9 +84,7 @@ public class MDCFilter implements Filter {
         MDC.put("user", user);
       }
       MDC.put("method", ((HttpServletRequest) request).getMethod());
-      if (((HttpServletRequest) request).getPathInfo() != null) {
-        MDC.put("path", ((HttpServletRequest) request).getPathInfo());
-      }
+      MDC.put("path", ((HttpServletRequest) request).getPathInfo());
       chain.doFilter(request, response);
     } finally {
       MDC.clear();
