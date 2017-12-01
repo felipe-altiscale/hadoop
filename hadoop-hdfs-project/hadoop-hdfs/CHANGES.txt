@@ -22,6 +22,20 @@ Release 2.7.5 - UNRELEASED
     HDFS-9107. Prevent NN's unrecoverable death spiral after full GC (Daryn
     Sharp via Colin P. McCabe)
 
+    HDFS-10738. Fix
+    TestRefreshUserMappings.testRefreshSuperUserGroupsConfiguration
+    test failure. (Rakesh R via kihwal)
+
+    HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
+
+    HDFS-9003. ForkJoin thread pool leaks. (Kihwal Lee via jing9)
+
+    HDFS-12832. INode.getFullPathName may throw ArrayIndexOutOfBoundsException
+    lead to NameNode exit. (shv)
+
+    HDFS-12638. Delete copy-on-truncate block along with the original block,
+    when deleting a file being truncated. (shv)
+
 Release 2.7.4 - 2017-08-04
 
   INCOMPATIBLE CHANGES
