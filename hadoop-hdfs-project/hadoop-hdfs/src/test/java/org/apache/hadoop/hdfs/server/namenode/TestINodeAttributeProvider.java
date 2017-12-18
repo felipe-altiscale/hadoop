@@ -248,4 +248,48 @@ public class TestINodeAttributeProvider {
     Assert.assertEquals(2, xAttrs.get("user.test").length);
   }
 
+  @Test
+  public void testCustomProviderAsNonSuperUser() throws Exception {
+    final String userName = "normaluser";
+    final String userGroup = "normalusergroup";
+    final UserGroupInformation normalUser =
+            UserGroupInformation.createUserForTesting(userName,
+                    new String[]{userGroup});
+
+    normalUser.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        FileSystem fs = FileSystem.get(miniDFS.getConfiguration(0));
+        Path myHomeDir = new Path("/user/" + normalUser.getUserName());
+        fs.mkdirs(myHomeDir);
+
+        FileStatus status = fs.getFileStatus(new Path("/"));
+        System.out.println("/ is owned by: " + status.getOwner());
+
+        status = fs.getFileStatus(myHomeDir);
+        Assert.assertEquals(userName, status.getOwner());
+        Assert.assertEquals("supergroup", status.getGroup());
+        Assert.assertEquals(new FsPermission((short) 0755), status.getPermission());
+        fs.mkdirs(new Path("/user/authz"));
+        Path p = new Path("/user/authz");
+        status = fs.getFileStatus(p);
+        Assert.assertEquals("foo", status.getOwner());
+        Assert.assertEquals("bar", status.getGroup());
+        Assert.assertEquals(new FsPermission((short) 0770), status.getPermission());
+        AclStatus aclStatus = fs.getAclStatus(p);
+        Assert.assertEquals(1, aclStatus.getEntries().size());
+        Assert.assertEquals(AclEntryType.GROUP, aclStatus.getEntries().get(0)
+                .getType());
+        Assert.assertEquals("xxx", aclStatus.getEntries().get(0)
+                .getName());
+        Assert.assertEquals(FsAction.ALL, aclStatus.getEntries().get(0)
+                .getPermission());
+        Map<String, byte[]> xAttrs = fs.getXAttrs(p);
+        Assert.assertTrue(xAttrs.containsKey("user.test"));
+        Assert.assertEquals(2, xAttrs.get("user.test").length);
+        return null;
+      }
+    });
+  }
+
 }
