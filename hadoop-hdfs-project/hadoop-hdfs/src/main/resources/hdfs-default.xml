@@ -2216,6 +2216,18 @@
 </property>
 
 <property>
+  <name>dfs.client.socket.send.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket send buffer size for a write pipeline in DFSClient side.
+    This may affect TCP connection throughput.
+    If it is set to zero or negative value,
+    no buffer size will be set explicitly,
+    thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
+<property>
   <name>dfs.domain.socket.path</name>
   <value></value>
   <description>
@@ -2619,4 +2631,47 @@
     <description>Instrumentation reporting long critical sections will suppress
       consecutive warnings within this interval.</description>
   </property>
+
+<property>
+  <name>dfs.namenode.quota.init-threads</name>
+  <value>4</value>
+  <description>
+    The number of concurrent threads to be used in quota initialization. The
+    speed of quota initialization also affects the namenode fail-over latency.
+    If the size of name space is big, try increasing this.
+  </description>
+</property>
+
+  <property>
+    <name>dfs.reformat.disabled</name>
+    <value>false</value>
+    <description>
+      Disable reformat of NameNode. If it's value is set to "true"
+      and metadata directories already exist then attempt to format NameNode
+      will throw NameNodeFormatException.
+    </description>
+  </property>
+
+<property>
+  <name>dfs.datanode.transfer.socket.send.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket send buffer size for DataXceiver (mirroring packets to downstream
+    in pipeline). This may affect TCP connection throughput.
+    If it is set to zero or negative value, no buffer size will be set
+    explicitly, thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.transfer.socket.recv.buffer.size</name>
+  <value>131072</value>
+  <description>
+    Socket receive buffer size for DataXceiver (receiving packets from client
+    during block writing). This may affect TCP connection throughput.
+    If it is set to zero or negative value, no buffer size will be set
+    explicitly, thus enable tcp auto-tuning on some system.
+  </description>
+</property>
+
 </configuration>
