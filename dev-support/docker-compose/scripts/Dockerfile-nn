@@ -1,0 +1,7 @@
+FROM hadoop:2.7.4
+
+COPY dev-support/docker-compose/scripts/start-namenode.sh /root/start-namenode.sh
+
+USER root
+WORKDIR /root
+CMD "./start-namenode.sh"
