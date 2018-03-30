@@ -1,0 +1,9 @@
+kdc:
+  image: hadoop-krb:2.7.5
+  hostname: kdc
+  container_name: kdc
+  domainname: hadoop
+  net: hadoop
+  volumes:
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
+    - ${HADOOP_COMPOSE_DIR}/kerberos/logs:/var/log/kerberos

@@ -1,0 +1,19 @@
+FROM hadoop:2.7.4
+
+RUN cd /opt && \
+    git clone https://github.com/altiscale/hive && \
+    cd /opt/hive && \
+    git checkout origin/branch-2.1.1-alti
+
+RUN apt-get -y install mysql-server libmysql-java 
+RUN cd /opt/hive && mvn clean package -Pdist -DskipTests
+
+ENV HIVE_HOME=/opt/hive/packaging/target/apache-hive-2.1.1-bin/apache-hive-2.1.1-bin
+ENV PATH=$PATH:$HIVE_HOME/bin
+RUN ln -s /usr/share/java/mysql-connector-java-5.1.42.jar $HIVE_HOME/lib/mysql-connector-java.jar
+
+COPY dev-support/docker-compose/scripts/start-hive.sh /root/start-hive.sh
+
+USER root
+WORKDIR /root
+CMD "/root/start-hive.sh"
