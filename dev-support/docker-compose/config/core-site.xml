@@ -19,4 +19,12 @@
         <name>hadoop.security.authorization</name>
         <value>false</value>
     </property>
+    <property>
+        <name>hadoop.proxyuser.root.hosts</name>
+        <value>*</value>
+    </property>
+    <property>
+         <name>hadoop.proxyuser.root.groups</name>
+         <value>*</value>
+    </property>
 </configuration>

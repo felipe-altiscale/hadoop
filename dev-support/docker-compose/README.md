@@ -67,7 +67,7 @@ $ yarn jar \
   /opt/hadoop/hadoop-mapreduce-project/hadoop-mapreduce-examples/target/hadoop-mapreduce-examples-2.7.4.jar \
   pi 10 100
 ```
-Test HIVE (run from the hive container:
+Test HIVE:
 ```
 $ hive
 CREATE DATABASE IF NOT EXISTS hivetest;
