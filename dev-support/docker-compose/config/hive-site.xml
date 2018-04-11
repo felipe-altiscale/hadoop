@@ -36,6 +36,11 @@
     <description>Enable user impersonation for HiveServer2</description>
     <value>true</value>
   </property>
+  <property>
+    <name>hive.server2.enable.doAs</name>
+    <description>Enable user doAs for HiveServer2</description>
+    <value>true</value>
+  </property>
 
   <!-- Add custom authentication class for hiveserver2 -->
   <property>
