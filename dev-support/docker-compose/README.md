@@ -4,7 +4,7 @@ A modern development environment for debugging, testing and patching components 
 ![alt text](other/docker-compose.png "Hadoop Docker Compose")
 
 ## Requirements
-- Docker v17.12.0 or greater (with Docker VM configured to 4 CPU and 8GB RAM is recommended)
+- Docker v17.12.0 or greater (with OSX Docker VM configured to at least 5GB RAM)
 - OSX 10.13.3 or Linux
 
 ## Setup
@@ -37,6 +37,8 @@ $ dev-support/docker-compose/scripts/docker-build.sh
 ## Starting the cluster
 Now go to the docker-compose directory and run:
 ```
+$ export HADOOP_COMPOSE_DIR=`pwd`
+$ export FORMAT_NAMENODE=false
 $ docker-compose up --force-recreate
 ```
 
