@@ -23,8 +23,6 @@ namenode:
     - "50070:50070"
     - "50470:50470"
     - "8020:8020"
-    - "14000:14000"
-    - "14001:14001"
   environment:
     - FORMAT_NAMENODE=${FORMAT_NAMENODE}
 
@@ -41,6 +39,19 @@ datanode1:
     - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
   ports:
     - "50010:50010"
+
+httpfs1:
+  image: hadoop-httpfs:2.7.4
+  hostname: httpfs1
+  container_name: httpfs1
+  domainname: hadoop
+  net: hadoop
+  volumes:
+    - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
+    - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
+  ports:
+    - "14000:14000"
 
 resourcemanager:
   image: hadoop-rm:2.7.4
