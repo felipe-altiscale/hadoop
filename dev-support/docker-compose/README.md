@@ -12,6 +12,10 @@ Update your hosts file so the web ui links work for the rm, nm and spark:
 ```
 #/etc/hosts
 
+127.0.0.1       namenode
+127.0.0.1       namenode.hadoop
+127.0.0.1       httpfs1
+127.0.0.1       httpfs1.hadoop
 127.0.0.1       nodemanager1
 127.0.0.1       nodemanager1.hadoop
 127.0.0.1       resourcemanager
@@ -87,4 +91,8 @@ $ /opt/spark/bin/spark-submit \
   --num-executors 1 \
   /opt/spark/examples/target/original-spark-examples_2.11-2.3.0-SNAPSHOT.jar \
   1
+```
+Test HTTPFS
+```
+$ curl -sS 'http://httpfs1.hadoop:14000/webhdfs/v1?op=gethomedirectory&user.name=root'
 ```
