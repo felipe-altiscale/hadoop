@@ -88,3 +88,7 @@ $ /opt/spark/bin/spark-submit \
   /opt/spark/examples/target/original-spark-examples_2.11-2.3.0-SNAPSHOT.jar \
   1
 ```
+Test HTTPFS
+```
+$ curl -sS 'http://namenode.hadoop:14000/webhdfs/v1?op=gethomedirectory&user.name=root'
+```

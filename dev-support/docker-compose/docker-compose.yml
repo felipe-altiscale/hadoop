@@ -23,6 +23,8 @@ namenode:
     - "50070:50070"
     - "50470:50470"
     - "8020:8020"
+    - "14000:14000"
+    - "14001:14001"
   environment:
     - FORMAT_NAMENODE=${FORMAT_NAMENODE}
 
