@@ -44,6 +44,8 @@ datanode2:
   image: hadoop-dn:2.7.4
   hostname: datanode2
   container_name: datanode2
+  net: hadoop
+  volumes:
     - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
     - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
     - ${HADOOP_COMPOSE_DIR}/storage/datanode2:/tmp/hadoop-root/dfs/data
@@ -69,7 +71,6 @@ httpfs1:
   image: hadoop-httpfs:2.7.4
   hostname: httpfs1
   container_name: httpfs1
-    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
   ports:
     - "14000:14000"
   domainname: hadoop
@@ -77,6 +78,7 @@ httpfs1:
   volumes:
     - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
     - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
 
 resourcemanager:
   image: hadoop-rm:2.7.4
