@@ -1,0 +1,7 @@
+FROM hadoop:2.7.4
+
+COPY dev-support/docker-compose/scripts/start-httpfs.sh /root/start-httpfs.sh
+
+USER root
+WORKDIR /root
+CMD "./start-httpfs.sh"

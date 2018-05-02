@@ -1,0 +1,10 @@
+<?xml version='1.0'?>
+<configuration>
+  <property>
+    <name>httpfs.ssl.enabled</name>
+    <value>false</value>
+    <description>
+      Whether SSL is enabled. Default is false, i.e. disabled.
+    </description>
+  </property>
+</configuration>
