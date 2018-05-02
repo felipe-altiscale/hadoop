@@ -12,10 +12,6 @@
         <value>resourcemanager</value>
     </property>
     <property>
-        <name>yarn.nodemanager.hostname</name>
-        <value>nodemanager1</value>
-    </property>
-    <property>
         <name>yarn.resourcemanager.keytab</name>
         <value>/var/lib/krb5kdc/root.keytab</value>
     </property>

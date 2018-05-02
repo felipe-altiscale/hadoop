@@ -40,18 +40,45 @@ datanode1:
   ports:
     - "50010:50010"
 
+datanode2:
+  image: hadoop-dn:2.7.4
+  hostname: datanode2
+  container_name: datanode2
+  net: hadoop
+  volumes:
+    - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
+    - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
+    - ${HADOOP_COMPOSE_DIR}/storage/datanode2:/tmp/hadoop-root/dfs/data
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
+  ports:
+    - "50011:50010"
+
+datanode3:
+  image: hadoop-dn:2.7.4
+  hostname: datanode3
+  container_name: datanode3
+  domainname: hadoop
+  net: hadoop
+  volumes:
+    - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
+    - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
+    - ${HADOOP_COMPOSE_DIR}/storage/datanode3:/tmp/hadoop-root/dfs/data
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
+  ports:
+    - "50012:50010"
+
 httpfs1:
   image: hadoop-httpfs:2.7.4
   hostname: httpfs1
   container_name: httpfs1
+  ports:
+    - "14000:14000"
   domainname: hadoop
   net: hadoop
   volumes:
     - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
     - ${HADOOP_COMPOSE_DIR}/logs:/var/log/hadoop/logs
     - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
-  ports:
-    - "14000:14000"
 
 resourcemanager:
   image: hadoop-rm:2.7.4
@@ -83,6 +110,19 @@ nodemanager1:
     - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
   ports:
     - "8042:8042"
+
+nodemanager2:
+  image: hadoop-nm:2.7.4
+  hostname: nodemanager2
+  container_name: nodemanager2
+  domainname: hadoop
+  net: hadoop
+  volumes:
+    - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
+    - ${HADOOP_COMPOSE_DIR}/logs:/opt/hadoop/hadoop-dist/target/hadoop-2.7.4/logs
+    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
+  ports:
+    - "8043:8042"
 
 hive:
   image: hadoop-hive:2.7.4
