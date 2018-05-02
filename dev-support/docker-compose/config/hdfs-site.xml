@@ -49,7 +49,7 @@
     </property>
     <property>
       <name>dfs.namenode.https-address</name>
-      <value>namenode.hadoop:10023</value>
+      <value>namenode.hadoop:50070</value>
     </property>
     <property>
       <name>dfs.http.policy</name>
