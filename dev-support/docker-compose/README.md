@@ -38,6 +38,9 @@ Go to the repo base directory and run:
 $ dev-support/docker-compose/scripts/docker-build.sh
 ```
 
+## Creating new cluster for the first time
+When you first create cluster, you need to format hdfs. Formating will also change cluster id, so you want to also delete the state from datanode directories (which are mounted as docker volumes in datanode containers). Easiest way is to run script create-cluster.sh.
+
 ## Starting the cluster
 Now go to the docker-compose directory and run:
 ```
@@ -45,6 +48,8 @@ $ export HADOOP_COMPOSE_DIR=`pwd`
 $ export FORMAT_NAMENODE=false
 $ docker-compose up --force-recreate
 ```
+
+Alternatively, you can also run start-cluster.sh.
 
 ## Stopping the cluster
 ```
