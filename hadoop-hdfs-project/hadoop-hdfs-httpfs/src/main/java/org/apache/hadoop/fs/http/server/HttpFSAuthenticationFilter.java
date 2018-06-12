@@ -107,14 +107,13 @@ public class HttpFSAuthenticationFilter
 
   @Override
   protected void setAuthHandlerClass(Properties props)
-              throws ServletException {
+      throws ServletException {
     String authType = props.getProperty(AUTH_TYPE);
     if (authType != null) {
       props.setProperty(AUTH_TYPE, authType);
     }
     super.setAuthHandlerClass(props);
   }
-
 
   protected Configuration getProxyuserConfiguration(FilterConfig filterConfig) {
     Map<String, String> proxyuserConf = HttpFSServerWebApp.get().getConfig().
