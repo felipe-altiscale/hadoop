@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -201,8 +200,7 @@ public class TestRunJar extends TestCase {
       RunJar.unJar(jarFile, unjarDir);
       fail("unJar should throw IOException.");
     } catch (IOException e) {
-      GenericTestUtils.assertExceptionContains(
-          "would create file outside of", e);
+      assertTrue(e.getMessage().contains("would create file outside of"));
     }
   }
 }
