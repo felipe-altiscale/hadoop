@@ -39,7 +39,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     fuse libfuse-dev \
     libcurl4-openssl-dev \
     python python2.7 pylint \
-    openjdk-7-jdk doxygen
+    openjdk-7-jdk doxygen \
+    rsync
 
 # Fixing the Apache commons / Maven dependency problem under Ubuntu:
 # See http://wiki.apache.org/commons/VfsProblems
@@ -57,21 +58,19 @@ RUN apt-get update
 RUN apt-get install -y openjdk-7-jdk
 
 ######
-# Install spotbugs (successor of findbugs)
+# Install findbugs (disabled for performance)
 ######
-RUN mkdir -p /opt/spotbugs && \
-    curl -L -s -S \
-         http://repo.maven.apache.org/maven2/com/github/spotbugs/spotbugs/3.1.2/spotbugs-3.1.2.tgz \
-         -o /opt/spotbugs.tar.gz && \
-    tar xzf /opt/spotbugs.tar.gz --strip-components 1 -C /opt/spotbugs
-# Hadoop uses FINDBUGS_HOME to run spotbugs
-ENV FINDBUGS_HOME /opt/spotbugs
+#RUN mkdir -p /opt/findbugs && \
+#    curl -L https://sourceforge.net/projects/findbugs/files/findbugs/3.0.1/findbugs-noUpdateChecks-3.0.1.tar.gz/download \
+#         -o /opt/findbugs.tar.gz && \
+#    tar xzf /opt/findbugs.tar.gz --strip-components 1 -C /opt/findbugs
+#ENV FINDBUGS_HOME /opt/findbugs
 
 ####
-# Install shellcheck
+# Install shellcheck (disabled for performance)
 ####
-RUN apt-get install -y cabal-install
-RUN cabal update && cabal install shellcheck --global
+#RUN apt-get install -y cabal-install
+#RUN cabal update && cabal install shellcheck --global
 
 ###
 # Avoid out of memory errors in builds
