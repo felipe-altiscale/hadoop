@@ -27,14 +27,15 @@ public class TestRandomSeedGenerator {
   public void testSeedGeneration() {
     long masterSeed1 = 42;
     long masterSeed2 = 43;
-    
+
     assertTrue("Deterministic seeding",
         getSeed("stream1", masterSeed1) == getSeed("stream1", masterSeed1));
     assertTrue("Deterministic seeding",
         getSeed("stream2", masterSeed2) == getSeed("stream2", masterSeed2));
-    assertTrue("Different streams", 
+    assertTrue("Different streams",
         getSeed("stream1", masterSeed1) != getSeed("stream2", masterSeed1));
     assertTrue("Different master seeds",
         getSeed("stream1", masterSeed1) != getSeed("stream1", masterSeed2));
+
   }
 }
