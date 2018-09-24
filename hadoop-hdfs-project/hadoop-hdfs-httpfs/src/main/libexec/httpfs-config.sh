@@ -123,7 +123,7 @@ if [ ! -f ${HTTPFS_TEMP} ]; then
 fi
 
 if [ "${HTTPFS_HTTP_PORT}" = "" ]; then
-  export HTTPFS_HTTP_PORT=14000
+  export HTTPFS_HTTP_PORT=4443
   print "Setting HTTPFS_HTTP_PORT:     ${HTTPFS_HTTP_PORT}"
 else
   print "Using   HTTPFS_HTTP_PORT:     ${HTTPFS_HTTP_PORT}"
@@ -144,7 +144,7 @@ else
 fi
 
 if [ "${HTTPFS_SSL_ENABLED}" = "" ]; then
-  export HTTPFS_SSL_ENABLED="false"
+  export HTTPFS_SSL_ENABLED="true"
   print "Setting HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
 else
   print "Using   HTTPFS_SSL_ENABLED: ${HTTPFS_SSL_ENABLED}"
