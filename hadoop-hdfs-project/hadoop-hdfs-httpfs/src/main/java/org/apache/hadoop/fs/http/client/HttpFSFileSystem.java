@@ -94,14 +94,11 @@ import java.util.Map;
 public class HttpFSFileSystem extends FileSystem
         implements DelegationTokenRenewer.Renewable {
 
-  public static final String SERVICE_NAME = HttpFSUtils.SERVICE_NAME;
-
   public static final String SERVICE_VERSION = HttpFSUtils.SERVICE_VERSION;
 
   public static final String SCHEME = "webhdfs";
 
   public static final String OP_PARAM = "op";
-  public static final String DO_AS_PARAM = "doas";
   public static final String OVERWRITE_PARAM = "overwrite";
   public static final String REPLICATION_PARAM = "replication";
   public static final String BLOCKSIZE_PARAM = "blocksize";
@@ -198,12 +195,6 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
 
-  public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
-  public static final String PARTIAL_LISTING_JSON = "partialListing";
-  public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
-
-  public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
-  public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
   public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
@@ -225,9 +216,7 @@ public class HttpFSFileSystem extends FileSystem
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
     REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
-    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
-    GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
-    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST);
+    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET);
 
     private String httpMethod;
 
@@ -723,35 +712,6 @@ public class HttpFSFileSystem extends FileSystem
     return toFileStatuses(json, f);
   }
 
-//  @Override
-//  public DirectoryEntries listStatusBatch(Path f, byte[] token) throws
-//          FileNotFoundException, IOException {
-//    Map<String, String> params = new HashMap<String, String>();
-//    params.put(OP_PARAM, Operation.LISTSTATUS_BATCH.toString());
-//    if (token != null) {
-//      params.put(START_AFTER_PARAM, new String(token, Charsets.UTF_8));
-//    }
-//    HttpURLConnection conn = getConnection(
-//            Operation.LISTSTATUS_BATCH.getMethod(),
-//            params, f, true);
-//    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-//    // Parse the FileStatus array
-//    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-//    JSONObject listing = (JSONObject) json.get(DIRECTORY_LISTING_JSON);
-//    FileStatus[] statuses = toFileStatuses(
-//            (JSONObject) listing.get(PARTIAL_LISTING_JSON), f);
-//    // New token is the last FileStatus entry
-//    byte[] newToken = null;
-//    if (statuses.length > 0) {
-//      newToken = statuses[statuses.length - 1].getPath().getName().toString()
-//              .getBytes(Charsets.UTF_8);
-//    }
-//    // Parse the remainingEntries boolean into hasMore
-//    final long remainingEntries = (Long) listing.get(REMAINING_ENTRIES_JSON);
-//    final boolean hasMore = remainingEntries > 0 ? true : false;
-//    return new DirectoryEntries(statuses, newToken, hasMore);
-//  }
-
   /**
    * Set the current working directory for the given file system. All relative
    * paths will be resolved relative to it.
@@ -835,33 +795,6 @@ public class HttpFSFileSystem extends FileSystem
       throw new RuntimeException(ex);
     }
   }
-
-//  /**
-//   * Get the root directory of Trash for a path in HDFS.
-//   * 1. File in encryption zone returns /ez1/.Trash/username.
-//   * 2. File not in encryption zone, or encountered exception when checking
-//   *    the encryption zone of the path, returns /users/username/.Trash.
-//   * Caller appends either Current or checkpoint timestamp
-//   * for trash destination.
-//   * The default implementation returns "/user/username/.Trash".
-//   * @param fullPath the trash root of the path to be determined.
-//   * @return trash root
-//   */
-//  @Override
-//  public Path getTrashRoot(Path fullPath) {
-//    Map<String, String> params = new HashMap<>();
-//    params.put(OP_PARAM, Operation.GETTRASHROOT.toString());
-//    try {
-//      HttpURLConnection conn = getConnection(
-//              Operation.GETTRASHROOT.getMethod(), params, fullPath, true);
-//      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-//      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-//      return new Path((String) json.get(TRASH_DIR_JSON));
-//    } catch (IOException ex) {
-//      LOG.warn("Cannot find trash root of " + fullPath, ex);
-//      return super.getTrashRoot(fullPath);
-//    }
-//  }
 
   /**
    * Set owner of a path (i.e. a file or a directory).
@@ -1184,24 +1117,7 @@ public class HttpFSFileSystem extends FileSystem
     }
   }
 
-  public long renewDelegationToken(final Token<?> token) throws IOException {
-    try {
-      return UserGroupInformation.getCurrentUser().doAs(
-              new PrivilegedExceptionAction<Long>() {
-                @Override
-                public Long run() throws Exception {
-                  return authURL.renewDelegationToken(uri.toURL(), authToken);
-                }
-              }
-      );
-    } catch (Exception ex) {
-      if (ex instanceof IOException) {
-        throw (IOException) ex;
-      } else {
-        throw new IOException(ex);
-      }
-    }
-  }
+
 
   public void cancelDelegationToken(final Token<?> token) throws IOException {
     authURL.cancelDelegationToken(uri.toURL(), authToken);
@@ -1327,15 +1243,6 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
-  private Collection<BlockStoragePolicy> createStoragePolicies(JSONObject map)
-          throws IOException {
-    JSONArray jsonArray = (JSONArray) map.get(STORAGE_POLICY_JSON);
-    BlockStoragePolicy[] policies = new BlockStoragePolicy[jsonArray.size()];
-    for (int i = 0; i < jsonArray.size(); i++) {
-      policies[i] = createStoragePolicy((JSONObject) jsonArray.get(i));
-    }
-    return Arrays.asList(policies);
-  }
 
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
@@ -1371,33 +1278,6 @@ public class HttpFSFileSystem extends FileSystem
     BlockLocation[] locationArray = locationMap.get(
             BlockLocation.class.getSimpleName());
     return locationArray;
-  }
-
-  private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)
-          throws IOException {
-    byte id = ((Number) policyJson.get("id")).byteValue();
-    String name = (String) policyJson.get("name");
-    StorageType[] storageTypes = toStorageTypes((JSONArray) policyJson
-            .get("storageTypes"));
-    StorageType[] creationFallbacks = toStorageTypes((JSONArray) policyJson
-            .get("creationFallbacks"));
-    StorageType[] replicationFallbacks = toStorageTypes((JSONArray) policyJson
-            .get("replicationFallbacks"));
-    Boolean copyOnCreateFile = (Boolean) policyJson.get("copyOnCreateFile");
-    return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
-            replicationFallbacks, copyOnCreateFile.booleanValue());
-  }
-
-  private StorageType[] toStorageTypes(JSONArray array) throws IOException {
-    if (array == null) {
-      return null;
-    } else {
-      List<StorageType> storageTypes = new ArrayList<StorageType>(array.size());
-      for (Object name : array) {
-        storageTypes.add(StorageType.parseStorageType((String) name));
-      }
-      return storageTypes.toArray(new StorageType[storageTypes.size()]);
-    }
   }
 
 }
