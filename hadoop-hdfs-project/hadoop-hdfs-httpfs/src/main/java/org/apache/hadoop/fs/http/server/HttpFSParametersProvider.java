@@ -58,8 +58,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
     PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
     PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
-    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS,
-        new Class[] {OffsetParam.class, LenParam.class});
+    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
     PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
@@ -521,5 +520,4 @@ public class HttpFSParametersProvider extends ParametersProvider {
       super(NAME, XAttrCodec.class, null);
     }
   }
-  
 }

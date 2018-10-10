@@ -868,7 +868,7 @@ public class NamenodeWebHdfsMethods {
         return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       }
     }
-    case GETFILEBLOCKLOCATIONS:
+    case GET_BLOCK_LOCATIONS:
     {
       final long offsetValue = offset.getValue();
       final Long lengthValue = length.getValue();

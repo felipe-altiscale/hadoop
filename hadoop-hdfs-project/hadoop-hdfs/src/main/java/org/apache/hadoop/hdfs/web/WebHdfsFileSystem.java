@@ -1431,12 +1431,13 @@ public class WebHdfsFileSystem extends FileSystem
       final long offset, final long length) throws IOException {
     statistics.incrementReadOps(1);
 
-    final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
+    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
     return new FsPathResponseRunner<BlockLocation[]>(op, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
       BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return JsonUtil.toBlockLocationArray(json);
+        return DFSUtil.locatedBlocks2Locations(
+            JsonUtil.toLocatedBlocks(json));
       }
     }.run();
   }

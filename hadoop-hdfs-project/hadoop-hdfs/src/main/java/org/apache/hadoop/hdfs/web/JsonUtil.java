@@ -497,7 +497,6 @@ public class JsonUtil {
       return null;
     }
 
-
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put("fileLength", locatedblocks.getFileLength());
     m.put("isUnderConstruction", locatedblocks.isUnderConstruction());
@@ -514,6 +513,7 @@ public class JsonUtil {
     if (json == null) {
       return null;
     }
+
     final Map<?, ?> m = (Map<?, ?>)json.get(LocatedBlocks.class.getSimpleName());
     final long fileLength = ((Number) m.get("fileLength")).longValue();
     final boolean isUnderConstruction = (Boolean)m.get("isUnderConstruction");
@@ -794,98 +794,6 @@ public class JsonUtil {
       return XAttrCodec.decodeValue(value);
     } else {
       return new byte[0];
-    }
-  }
-  static String getPath(final Map<?, ?> json)
-          throws IOException {
-    if (json == null) {
-      return null;
-    }
-
-    String path = (String) json.get("Path");
-    return path;
-  }
-
-  public static String toJsonString(Object obj) throws IOException {
-    return MAPPER.writeValueAsString(obj);
-  }
-
-  public static Map<String, Object> toJsonMap(BlockLocation[] locations)
-          throws IOException {
-    if(locations == null) {
-      return null;
-    }
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    Object[] blockLocations = new Object[locations.length];
-    for(int i=0; i<locations.length; i++) {
-      blockLocations[i] = toJsonMap(locations[i]);
-    }
-    m.put(BlockLocation.class.getSimpleName(), blockLocations);
-    return m;
-  }
-
-  public static Map<String, Object> toJsonMap(
-          final BlockLocation blockLocation) throws IOException {
-    if (blockLocation == null) {
-      return null;
-    }
-
-    final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("length", blockLocation.getLength());
-    m.put("offset", blockLocation.getOffset());
-    m.put("corrupt", blockLocation.isCorrupt());
-    m.put("cachedHosts", blockLocation.getCachedHosts());
-    m.put("hosts", blockLocation.getHosts());
-    m.put("names", blockLocation.getNames());
-    m.put("topologyPaths", blockLocation.getTopologyPaths());
-    return m;
-  }
-
-  static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
-          throws IOException{
-    final Map<?, ?> rootmap =
-            (Map<?, ?>)json.get(BlockLocation.class.getSimpleName() + "s");
-    final List<?> array = getList(rootmap,
-            BlockLocation.class.getSimpleName());
-
-    final BlockLocation[] locations = new BlockLocation[array.size()];
-    int i = 0;
-    for (Object object : array) {
-      final Map<?, ?> m = (Map<?, ?>) object;
-      locations[i++] = JsonUtil.toBlockLocation(m);
-    }
-    return locations;
-  }
-
-  /** Convert a Json map to BlockLocation. **/
-  static BlockLocation toBlockLocation(Map<?, ?> m)
-          throws IOException{
-    if(m == null) {
-      return null;
-    }
-
-    long length = ((Number) m.get("length")).longValue();
-    long offset = ((Number) m.get("offset")).longValue();
-    boolean corrupt = Boolean.
-            getBoolean(m.get("corrupt").toString());
-    String[] cachedHosts = toStringArray(getList(m, "cachedHosts"));
-    String[] hosts = toStringArray(getList(m, "hosts"));
-    String[] names = toStringArray(getList(m, "names"));
-    String[] topologyPaths = toStringArray(getList(m, "topologyPaths"));
-    return new BlockLocation(names, hosts, cachedHosts,
-            topologyPaths,offset, length, corrupt);
-  }
-
-  static String[] toStringArray(List<?> list) {
-    if (list == null) {
-      return null;
-    } else {
-      final String[] array = new String[list.size()];
-      int i = 0;
-      for (Object object : list) {
-        array[i++] = object.toString();
-      }
-      return array;
     }
   }
 }
