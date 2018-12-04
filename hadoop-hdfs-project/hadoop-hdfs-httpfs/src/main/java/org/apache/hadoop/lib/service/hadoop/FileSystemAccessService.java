@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
@@ -65,6 +66,8 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
   public static final String FS_CACHE_PURGE_TIMEOUT = "filesystem.cache.purge.timeout";
 
   public static final String NAME_NODE_WHITELIST = "name.node.whitelist";
+  
+  private static final String HTTPFS_ENABLE_DOAS = "httpfs.hadoop.enable.doAs";
 
   public static final String HADOOP_CONF_DIR = "config.dir";
 
@@ -270,8 +273,12 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     return new Class[]{Instrumentation.class, Scheduler.class};
   }
 
-  protected UserGroupInformation getUGI(String user) throws IOException {
-    return UserGroupInformation.createProxyUser(user, UserGroupInformation.getLoginUser());
+  protected UserGroupInformation getUGI(String user, final Configuration conf) throws IOException {
+	boolean enableDoAs = HttpFSServerWebApp.get().getConfig().getBoolean(HTTPFS_ENABLE_DOAS, true);
+	if (enableDoAs)
+		return UserGroupInformation.createProxyUser(user, UserGroupInformation.getLoginUser());
+	else
+		return UserGroupInformation.getLoginUser();
   }
 
   protected void setRequiredServiceHadoopConf(Configuration conf) {
@@ -329,7 +336,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
       validateNamenode(
         new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).
           getAuthority());
-      UserGroupInformation ugi = getUGI(user);
+      UserGroupInformation ugi = getUGI(user, conf);
       return ugi.doAs(new PrivilegedExceptionAction<T>() {
         @Override
         public T run() throws Exception {
@@ -364,7 +371,7 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     try {
       validateNamenode(
         new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).getAuthority());
-      UserGroupInformation ugi = getUGI(user);
+      UserGroupInformation ugi = getUGI(user, conf);
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         @Override
         public FileSystem run() throws Exception {
